@@ -1,0 +1,13 @@
+<resources>
+
+    <string name="app_name">Inventory</string>
+    <string name="hBox">Optionally set the box number you wish to inventory.</string>
+    <string name="hBoxTitle">Box Number</string>
+    <string name="hInput">Enter sample identification value here. \nSamples are stored in a table and can be \ndeleted by long-pressing on the sample \nname.</string>
+    <string name="hInputTitle">Sample Input</string>
+    <string name="hExport">Export Data as a flat CSV file or structured \nSQL file with this button. Data is removed \nfrom the database upon successful export.</string>
+    <string name="hExportTitle">Export Data</string>
+    <string name="hClear">Cleared data is permanently deleted from \nthe application and is unrecoverable.</string>
+    <string name="hClearTitle">Clear Data</string>
+
+</resources>

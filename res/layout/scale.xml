@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:weightSum="4" >
+
+    <TableLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:weightSum="10" >
+
+        <TableRow
+            android:id="@+id/tableRowTitles"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" >
+
+            <TextView
+                android:id="@+id/tvNumTable"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".16"
+                android:gravity="center"
+                android:text="Num"
+                android:textSize="20dp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvBoxTable"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".16"
+                android:gravity="center"
+                android:text="Box"
+                android:textSize="20dp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvIdTable"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".5"
+                android:gravity="center"
+                android:text="ID"
+                android:textSize="20dp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvWtTable"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".16"
+                android:gravity="center"
+                android:text="Wt."
+                android:textSize="20dp"
+                android:textStyle="bold" />
+        </TableRow>
+
+        <ScrollView
+            android:id="@+id/svData"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="25dp"
+            android:background="#FFFFFF" >
+
+            <TableLayout
+                android:id="@+id/tlInventory"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" >
+            </TableLayout>
+        </ScrollView>
+    </TableLayout>
+
+    <TableLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_weight="2" >
+
+        <TableRow
+            android:id="@+id/tableRow1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="40sp"
+            android:paddingTop="25sp" >
+
+            <TextView
+                android:id="@+id/tvBox"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:text="Box:"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/tvBoxNum"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text=""
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/btBox"
+                android:layout_width="wrap_content"
+                android:layout_height="40sp"
+                android:gravity="center"
+                android:text="Set Box" />
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="40sp"
+            android:paddingTop="15sp" >
+
+            <TextView
+                android:id="@+id/tvInput"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:text="Input:"
+                android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/etInput"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:gravity="right"
+                android:inputType="textFilter"
+                android:lines="1"
+                android:singleLine="true" />
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="40sp"
+            android:paddingTop="15sp" >
+
+            <TextView
+                android:id="@+id/tvWeightLabel"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:text="Weight:"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/text_weight"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="0.0"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/text_unit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:text=" grams"
+                android:textSize="20sp" />
+        </TableRow>
+    </TableLayout>
+
+</LinearLayout>
