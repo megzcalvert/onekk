@@ -349,6 +349,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		final EditText input = new EditText(this);
 		input.setText(boxNumber);
 		input.selectAll();
+		input.setSingleLine();
 		alert.setTitle("Set Box");
 		alert.setView(input);
 		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
@@ -565,7 +566,6 @@ public class MainActivity extends Activity implements OnInitListener {
 							}
 
 						}).show();
-		makeToast("export");
 	}
 
 	private void exportCSV() {
@@ -687,7 +687,6 @@ public class MainActivity extends Activity implements OnInitListener {
 
 		}
 		db.close();
-		makeToast(filename);
 		shareFile(filename);
 		dropTables();
 	}
@@ -699,7 +698,6 @@ public class MainActivity extends Activity implements OnInitListener {
 		itemCount = list.size();
 
 		String[] boxes = db.getBoxList();
-		makeToast(boxes.toString());
 
 		if (itemCount != 0) {
 			try {
@@ -719,8 +717,8 @@ public class MainActivity extends Activity implements OnInitListener {
 				}
 
 				record = "DELETE FROM seedinv WHERE seedinv.box_id in ("
-						+ boxList + ")\n";
-				record += "INSERT INTO seedinv (box_id,seed_id,inventory_date,inventory_person,weight_gram)\r\n";
+						+ boxList + ");\n";
+				record += "INSERT INTO seedinv(`box_id`,`seed_id`,`inventory_date`,`inventory_person`,`weight_gram`)\r\nVALUES";
 				myOutWriter.append(record);
 
 				for (int i = 0; i < itemCount; i++) {
@@ -732,13 +730,20 @@ public class MainActivity extends Activity implements OnInitListener {
 						}
 					}
 
-					record = "VALUES (";
-					record += temp[0] + ","; // box
-					record += temp[1] + ","; // seed id
-					record += temp[3] + ","; // date
-					record += temp[2] + ","; // person
-					record += temp[5] + ","; // weight
-					record += ");\r\n";
+					record = "(";
+					record += addTicks(temp[0]) + ","; // box
+					record += addTicks(temp[1]) + ","; // seed id
+					record += addTicks(temp[3]) + ","; // date
+					record += addTicks(temp[2]) + ","; // person
+					record += addTicks(temp[5]); // weight
+					record += ")";
+					
+					if(i==itemCount-1){
+						record+=";\r\n";
+					} else {
+						record+=",\r\n";
+					}
+					
 					myOutWriter.append(record);
 				}
 				myOutWriter.close();
@@ -755,6 +760,17 @@ public class MainActivity extends Activity implements OnInitListener {
 		dropTables();
 	}
 
+	private String addTicks(String entry) {
+		String newEntry;
+		if(entry.contains("null")) {
+			newEntry = "null";
+			makeToast("success");
+		} else {
+			newEntry = "'" + entry + "'";
+		}
+		return newEntry;
+	}
+	
 	private void dropTables() {
 		db.deleteAllBooks();
 		InventoryTable.removeAllViews();
