@@ -31,6 +31,7 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -652,12 +653,11 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	private void writeCSV(String filename) {
 		String record;
-
+		File myFile = null;
 		list = db.getAllBooks();
 		itemCount = list.size();
 		if (itemCount != 0) {
 			try {
-				File myFile;
 				myFile = new File("sdcard/inventory/" + filename);
 				myFile.createNewFile();
 				FileOutputStream fOut = new FileOutputStream(myFile);
@@ -679,6 +679,7 @@ public class MainActivity extends Activity implements OnInitListener {
 				}
 				myOutWriter.close();
 				fOut.close();
+				makeFileDiscoverable(myFile,this);
 				makeToast("File exported successfully.");
 			} catch (Exception e) {
 				Toast.makeText(getBaseContext(), e.getMessage(),
@@ -694,6 +695,7 @@ public class MainActivity extends Activity implements OnInitListener {
 	private void writeSQL(String filename) {
 		String record;
 		String boxList = "";
+		File myFile = null;
 		list = db.getAllBooks();
 		itemCount = list.size();
 
@@ -701,7 +703,6 @@ public class MainActivity extends Activity implements OnInitListener {
 
 		if (itemCount != 0) {
 			try {
-				File myFile;
 				myFile = new File("sdcard/inventory/" + filename);
 				myFile.createNewFile();
 				FileOutputStream fOut = new FileOutputStream(myFile);
@@ -748,6 +749,8 @@ public class MainActivity extends Activity implements OnInitListener {
 				}
 				myOutWriter.close();
 				fOut.close();
+				makeFileDiscoverable(myFile,this);				
+				
 				makeToast("File exported successfully.");
 			} catch (Exception e) {
 				Toast.makeText(getBaseContext(), e.getMessage(),
@@ -759,12 +762,17 @@ public class MainActivity extends Activity implements OnInitListener {
 		shareFile(filename);
 		dropTables();
 	}
+	
+	public void makeFileDiscoverable(File file, Context context){
+		MediaScannerConnection.scanFile(context, new String[]{file.getPath()}, null, null);
+		context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+                Uri.fromFile(file)));
+	}
 
 	private String addTicks(String entry) {
 		String newEntry;
 		if(entry.contains("null")) {
 			newEntry = "null";
-			makeToast("success");
 		} else {
 			newEntry = "'" + entry + "'";
 		}
