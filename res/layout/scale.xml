@@ -149,12 +149,16 @@
                 android:text="Weight:"
                 android:textSize="20sp" />
 
-            <TextView
+            <EditText
                 android:id="@+id/text_weight"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="0.0"
+                android:inputType="textFilter"
+                android:lines="1"
+                android:singleLine="true"
+                android:selectAllOnFocus="true"
                 android:textSize="20sp" />
 
             <TextView

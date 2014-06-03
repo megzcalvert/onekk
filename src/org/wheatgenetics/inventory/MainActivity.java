@@ -70,7 +70,7 @@ public class MainActivity extends Activity implements OnInitListener {
 	private String boxNumber;
 	private String personID;
 	private TextView mUnitsView;
-	private TextView mWeightTextView;
+	private EditText mWeightEditText;
 	private TextView boxNumTextView;
 	TextView boxNumTV;
 	TextView itemNumTV;
@@ -105,8 +105,8 @@ public class MainActivity extends Activity implements OnInitListener {
 		mUnitsText = mSettings.getString("unitsText", "grams");
 		mUnitsView = (TextView) findViewById(R.id.text_unit);
 		mUnitsView.setText(mUnitsText);
-		mWeightTextView = (TextView) findViewById(R.id.text_weight);
-		mWeightTextView.setText("Not connected");
+		mWeightEditText = (EditText) findViewById(R.id.text_weight);
+		mWeightEditText.setText("Not connected");
 		boxNumTextView = (TextView) findViewById(R.id.tvBoxNum);
 		boxNumTextView.setText("");
 		setBox = (Button) findViewById(R.id.btBox);
@@ -149,6 +149,27 @@ public class MainActivity extends Activity implements OnInitListener {
 			}
 		});
 
+		
+		mWeightEditText.setOnKeyListener(new View.OnKeyListener() {
+			public boolean onKey(View v, int keyCode, KeyEvent event) {
+				if ((keyCode == KeyEvent.KEYCODE_ENTER)) {
+					InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+					mgr.showSoftInput(inputText,
+							InputMethodManager.HIDE_IMPLICIT_ONLY);
+					if (event.getAction() != KeyEvent.ACTION_DOWN)
+						return true;
+					addRecord(); // Add the current record to the table
+					goToBottom();
+					
+					if(mDevice != null) {
+					mWeightEditText.setText("");
+					}
+					inputText.requestFocus(); // Set focus back to Enter box
+				}
+				return false;
+			}
+		});
+		
 		setPersonDialog();
 		findScale();
 		createDirectory();
@@ -194,10 +215,10 @@ public class MainActivity extends Activity implements OnInitListener {
 		}
 
 		String weight;
-		if (mDevice == null) {
+		if (mDevice == null && mWeightEditText.getText().toString().equals("Not connected")) {
 			weight = "null";
 		} else {
-			weight = String.format("%.0f", mWeightGrams);
+			weight = mWeightEditText.getText().toString();
 		}
 
 		db.addBook(new InventoryRecord(boxNumTextView.getText().toString(), inputText
@@ -236,7 +257,8 @@ public class MainActivity extends Activity implements OnInitListener {
 	private void createNewTableEntry(String bn, int in, String en, String wt) {
 		String tag = bn + "," + en + "," + in;
 		inputText.setText("");
-
+		
+		
 		/* Create a new row to be added. */
 		TableRow tr = new TableRow(this);
 		tr.setLayoutParams(new TableLayout.LayoutParams(
@@ -475,15 +497,12 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	private void setPersonDialog() {
 		final AlertDialog.Builder alert = new AlertDialog.Builder(this);
-
 		LayoutInflater inflater = this.getLayoutInflater();
 		final View personView = inflater.inflate(R.layout.person, null);
-
 		final EditText fName = (EditText) personView
 				.findViewById(R.id.firstName);
 		final EditText lName = (EditText) personView
 				.findViewById(R.id.lastName);
-
 		fName.setText(firstName);
 		lName.setText(lastName);
 
@@ -818,7 +837,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		}
 
 		if (mDevice != null) {
-			mWeightTextView.setText("0");
+			mWeightEditText.setText("0");
 			new ScaleListener().execute();
 		} else {
 			new AlertDialog.Builder(MainActivity.this)
@@ -956,8 +975,8 @@ public class MainActivity extends Activity implements OnInitListener {
 
 			String weightText = String.format("%.0f", weight);
 			Log.i(TAG, weightText);
-			mWeightTextView.setText(weightText);
-			mWeightTextView.invalidate();
+			mWeightEditText.setText(weightText);
+			mWeightEditText.invalidate();
 		}
 
 		@Override
@@ -965,7 +984,7 @@ public class MainActivity extends Activity implements OnInitListener {
 			Toast.makeText(getApplicationContext(), "Scale Disconnected",
 					Toast.LENGTH_LONG).show();
 			mDevice = null;
-			mWeightTextView.setText("Not connected");
+			mWeightEditText.setText("Not connected");
 		}
 	}
 
