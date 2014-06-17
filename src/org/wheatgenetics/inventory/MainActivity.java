@@ -135,7 +135,7 @@ public class MainActivity extends Activity implements OnInitListener {
 
 		inputText.setOnKeyListener(new View.OnKeyListener() {
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
-				if ((keyCode == KeyEvent.KEYCODE_ENTER)) {
+				if (keyCode == KeyEvent.KEYCODE_ENTER) {
 					InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 					mgr.showSoftInput(inputText,
 							InputMethodManager.HIDE_IMPLICIT_ONLY);
@@ -145,14 +145,24 @@ public class MainActivity extends Activity implements OnInitListener {
 					goToBottom();
 					inputText.requestFocus(); // Set focus back to Enter box
 				}
+				
+				if (keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+					if (event.getAction() == KeyEvent.ACTION_DOWN) {
+						return true;
+					}
+					if (event.getAction() == KeyEvent.ACTION_UP) {
+						addRecord(); // Add the current record to the table
+						goToBottom();
+					}
+					inputText.requestFocus(); // Set focus back to Enter box
+				}
 				return false;
 			}
 		});
 
-		
 		mWeightEditText.setOnKeyListener(new View.OnKeyListener() {
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
-				if ((keyCode == KeyEvent.KEYCODE_ENTER)) {
+				if ((keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)) {
 					InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 					mgr.showSoftInput(inputText,
 							InputMethodManager.HIDE_IMPLICIT_ONLY);
@@ -163,6 +173,17 @@ public class MainActivity extends Activity implements OnInitListener {
 					
 					if(mDevice != null) {
 					mWeightEditText.setText("");
+					}
+					inputText.requestFocus(); // Set focus back to Enter box
+				}
+				
+				if (keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+					if (event.getAction() == KeyEvent.ACTION_DOWN) {
+						return true;
+					}
+					if (event.getAction() == KeyEvent.ACTION_UP) {
+						addRecord(); // Add the current record to the table
+						goToBottom();
 					}
 					inputText.requestFocus(); // Set focus back to Enter box
 				}
@@ -923,7 +944,11 @@ public class MainActivity extends Activity implements OnInitListener {
 					return null;
 				}
 
-				mWeightGrams = (weightLSB + weightMSB * 256);
+				if(mDevice.getProductId()==519){
+					mWeightGrams = (weightLSB + weightMSB * 256.0)/10.0;
+				} else {
+					mWeightGrams = (weightLSB + weightMSB * 256.0);	
+				}
 				double zWeight = (mWeightGrams - mZeroGrams);
 
 				switch (status) {
@@ -972,8 +997,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		protected void onProgressUpdate(Double... weights) {
 			Double weight = weights[0];
 			Log.i(TAG, "update progress");
-
-			String weightText = String.format("%.0f", weight);
+			String weightText = String.format("%.1f", weight);
 			Log.i(TAG, weightText);
 			mWeightEditText.setText(weightText);
 			mWeightEditText.invalidate();
