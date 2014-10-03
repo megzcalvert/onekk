@@ -1,4 +1,4 @@
-USB Inventory
+Wheat 1KK
 ===============
 
-Android app for Elane USB scale. 
+Android app to image, weigh, and analyze wheat seeds.
