@@ -1,21 +1,12 @@
-package org.wheatgenetics.inventory;
+package org.wheatgenetics.onekk;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-
-import com.espian.showcaseview.ShowcaseView;
-import com.espian.showcaseview.ShowcaseViews;
-import com.espian.showcaseview.ShowcaseViews.ItemViewProperties;
-import com.espian.showcaseview.targets.ActionItemTarget;
-import com.espian.showcaseview.targets.ViewTarget;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -35,9 +26,7 @@ import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceFragment;
 import android.speech.tts.TextToSpeech.OnInitListener;
-import android.text.InputType;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -46,7 +35,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnLongClickListener;
-import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
@@ -471,28 +459,6 @@ public class MainActivity extends Activity implements OnInitListener {
 	}
 
 	private void helpDialog() {
-		InventoryTable.removeAllViews();
-		ShowcaseView.ConfigOptions co = new ShowcaseView.ConfigOptions();
-		co.centerText = true;
-
-		ShowcaseViews views = new ShowcaseViews(this,
-				new ShowcaseViews.OnShowcaseAcknowledged() {
-					public void onShowCaseAcknowledged(ShowcaseView showcaseView) {
-						parseDbToTable();
-					}
-				});
-
-		views.addView(new ShowcaseViews.ItemViewProperties(R.id.btBox,
-				R.string.hBoxTitle, R.string.hBox, co));
-		views.addView(new ShowcaseViews.ItemViewProperties(R.id.etInput,
-				R.string.hInputTitle, R.string.hInput, co));
-		views.addView(new ShowcaseViews.ItemViewProperties(R.id.export,
-				R.string.hExportTitle, R.string.hExport, co));
-		views.addView(new ShowcaseViews.ItemViewProperties(
-				ItemViewProperties.ID_OVERFLOW, R.string.hClearTitle,
-				R.string.hClear, ShowcaseView.ITEM_ACTION_OVERFLOW, co));
-
-		views.show();
 	}
 
 	private void aboutDialog() {
