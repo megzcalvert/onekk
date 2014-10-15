@@ -12,8 +12,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 public class MySQLiteHelper extends SQLiteOpenHelper {
-	private static final int DATABASE_VERSION = 2;
-	private static final String DATABASE_NAME = "BookDB";
+	private static final int DATABASE_VERSION = 1;
+	private static final String DATABASE_NAME = "onekkdb";
 
 	public MySQLiteHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -21,28 +21,43 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
-		String CREATE_BOOK_TABLE = "CREATE TABLE books ( "
-				+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "box TEXT, "
-				+ "envid TEXT, " + "person TEXT, " + "date TEXT, "
-				+ "position TEXT, " + "wt TEXT" + ")";
-
-		// create books table
-		db.execSQL(CREATE_BOOK_TABLE);
+		db.execSQL("CREATE TABLE sample (id INTEGER PRIMARY KEY AUTOINCREMENT, sample_id TEXT, photo TEXT, person TEXT, timestamp TEXT, weight TEXT)");
+		db.execSQL("CREATE TABLE seed (id INTEGER PRIMARY KEY AUTOINCREMENT, sample_id TEXT, length TEXT, width TEXT, diameter TEXT, circularity TEXT, area TEXT, color TEXT )");
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		// Drop older books table if existed
-		db.execSQL("DROP TABLE IF EXISTS books");
+		// Drop older table if existed
+		db.execSQL("DROP TABLE IF EXISTS sample");
+		db.execSQL("DROP TABLE IF EXISTS seed");
 
-		// create fresh books table
+		// create fresh tables
 		this.onCreate(db);
 	}
 
-	// Books table name
-	private static final String TABLE_BOOKS = "books";
+	// Table names
+	private static final String TABLE_SAMPLE = "sample";
+	private static final String TABLE_SEED = "seed";
 
-	// Books Table Columns names
+	// Sample table columns names
+	private static final String SAMPLE_ID = "id";
+	private static final String SAMPLE_SID = "sample_id";
+	private static final String SAMPLE_PHOTO = "photo";
+	private static final String SAMPLE_PERSON = "person";
+	private static final String SAMPLE_TIME = "timestamp";
+	private static final String SAMPLE_WT = "weight";
+
+	// Sample table columns names
+	private static final String SEED_ID = "id";
+	private static final String SEED_SID = "sample_id";
+	private static final String SEED_LEN = "length";
+	private static final String SEED_WID = "width";
+	private static final String SEED_DIAM = "diameter";
+	private static final String SEED_CIRC = "circularity";
+	private static final String SEED_AREA = "area";
+	private static final String SEED_COL = "color";
+
+	// Sample table columns names
 	private static final String KEY_ID = "id";
 	private static final String KEY_BOX = "box";
 	private static final String KEY_ENVID = "envid";
@@ -51,8 +66,59 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 	private static final String KEY_POSITION = "position";
 	private static final String KEY_WT = "wt";
 
-	private static final String[] COLUMNS = { KEY_ID, KEY_BOX, KEY_ENVID,
-			KEY_PERSON, KEY_DATE, KEY_POSITION, KEY_WT };
+	private static final String[] SAMPLE_COLUMNS = { SAMPLE_ID, SAMPLE_SID,
+			SAMPLE_PHOTO, SAMPLE_PERSON, SAMPLE_WT, SAMPLE_TIME };
+
+	private static final String[] SEED_COLUMNS = { SEED_ID, SEED_SID, SEED_LEN,
+			SEED_WID, SEED_DIAM, SEED_CIRC, SEED_AREA, SEED_COL };
+
+	public void addSampleRecord(SampleRecord sample) {
+		Log.d("Add Sample: ", sample.toString());
+
+		// 1. get reference to writable DB
+		SQLiteDatabase db = this.getWritableDatabase();
+
+		// 2. create ContentValues to add key "column"/value
+		ContentValues values = new ContentValues();
+		
+		values.put(SAMPLE_ID, sample.getBox());
+		values.put(SAMPLE_SID, sample.getEnvID());
+		values.put(SAMPLE_PHOTO, sample.getPersonID());
+		values.put(SAMPLE_PERSON, sample.getDate());
+		values.put(SAMPLE_TIME, sample.getWt());
+		values.put(SAMPLE_WT, sample.getPosition());
+		
+		// 3. insert
+		db.insert(TABLE_SAMPLE,null,values);
+
+		// 4. close
+		db.close();
+	}
+	
+	public void addSeedRecord(SeedRecord seed) {
+		// for logging
+		Log.d("Add Seed: ", seed.toString());
+
+		// 1. get reference to writable DB
+		SQLiteDatabase db = this.getWritableDatabase();
+
+		// 2. create ContentValues to add key "column"/value
+		ContentValues values = new ContentValues();
+		values.put(SEED_ID, seed.getBox());
+		values.put(SEED_SID, seed.getEnvID());
+		values.put(SEED_LEN, seed.getPersonID());
+		values.put(SEED_WID, seed.getDate());
+		values.put(SEED_DIAM, seed.getPosition());
+		values.put(SEED_CIRC, seed.getWt());
+		values.put(SEED_AREA, seed.getWt());
+		values.put(SEED_COL, seed.getWt());
+		
+		// 3. insert
+		db.insert(TABLE_SEED, null, values);
+
+		// 4. close
+		db.close();
+	}
 
 	public void addBook(InventoryRecord book) {
 		// for logging
@@ -71,7 +137,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 		values.put(KEY_WT, book.getWt());
 
 		// 3. insert
-		db.insert(TABLE_BOOKS, // table
+		db.insert(TABLE_SAMPLE, // table
 				null, // nullColumnHack
 				values); // key/value -> keys = column names/ values = column
 							// values
@@ -80,48 +146,12 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 		db.close();
 	}
 
-	public InventoryRecord getBook(int id) {
-
-		// 1. get reference to readable DB
-		SQLiteDatabase db = this.getReadableDatabase();
-
-		// 2. build query
-		Cursor cursor = db.query(TABLE_BOOKS, // a. table
-				COLUMNS, // b. column names
-				" id = ?", // c. selections
-				new String[] { String.valueOf(id) }, // d. selections args
-				null, // e. group by
-				null, // f. having
-				null, // g. order by
-				null); // h. limit
-
-		// 3. if we got results get the first one
-		if (cursor != null)
-			cursor.moveToFirst();
-
-		// 4. build book object
-		InventoryRecord book = new InventoryRecord();
-
-		book.setId(Integer.parseInt(cursor.getString(0)));
-		book.setBox(cursor.getString(1));
-		book.setEnvID(cursor.getString(2));
-		book.setPersonID(cursor.getString(3));
-		book.setDate(cursor.getString(4));
-		book.setPosition(Integer.parseInt(cursor.getString(5)));
-		book.setWt(cursor.getString(6));
-
-		// log
-		Log.d("getBook(" + id + ")", book.toString());
-
-		// 5. return book
-		return book;
-	}
-
+	//TODO query and return cursor
 	public List<InventoryRecord> getAllBooks() {
 		List<InventoryRecord> books = new LinkedList<InventoryRecord>();
 
 		// 1. build the query
-		String query = "SELECT  * FROM " + TABLE_BOOKS;
+		String query = "SELECT  * FROM " + TABLE_SAMPLE;
 
 		// 2. get reference to writable DB
 		SQLiteDatabase db = this.getWritableDatabase();
@@ -151,59 +181,19 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 		return books;
 	}
 
-	public int updateBook(InventoryRecord book) {
-
-		// 1. get reference to writable DB
+	public Boolean deleteSample(SampleRecord sample) {
 		SQLiteDatabase db = this.getWritableDatabase();
-
-		// 2. create ContentValues to add key "column"/value
-		ContentValues values = new ContentValues();
-
-		values.put("id", book.getId());
-		values.put("box", book.getBox());
-		values.put("envid", book.getEnvID());
-		values.put("person", book.getPersonID());
-		values.put("date", book.getDate());
-		values.put("position", book.getPosition());
-		values.put("wt", book.getWt());
-
-		// 3. updating row
-		int i = db.update(TABLE_BOOKS, // table
-				values, // column/value
-				KEY_ID + " = ?", // selections
-				new String[] { String.valueOf(book.getId()) });
-		db.close();
-
-		return i;
-
-	}
-
-	public Boolean deleteBook(InventoryRecord book) {
-		SQLiteDatabase db = this.getWritableDatabase();
-		String num = "'" + Integer.toString(book.getPosition()) + "'";
-		Log.d("deleteBook", book.toString());
-		return db.delete(TABLE_BOOKS, KEY_POSITION + "=" + num, null) > 0;
-	}
-
-	public void deleteAllBooks() {
-		SQLiteDatabase db = this.getWritableDatabase();
-		db.delete(TABLE_BOOKS, null, null);
-	}
-
-	public String[] getBoxList() {
-		SQLiteDatabase db = this.getWritableDatabase();
-		Cursor cursor = db.query(true, TABLE_BOOKS, new String[] { KEY_BOX },
-				null, null, KEY_BOX, null, null, null);
-		String[] boxes = new String[cursor.getCount()];
-		ArrayList<String> arrcurval = new ArrayList<String>();
-		if (cursor.moveToFirst()) {
-			do {
-				arrcurval.add(cursor.getString(0));
-			} while (cursor.moveToNext());
-		}
-
-		boxes = arrcurval.toArray(boxes);
 		
-		return boxes;
+		String num = "'" + Integer.toString(sample.getPosition()) + "'";
+		Log.d("Delete sample: ", sample.toString());
+		
+		//TODO delete from sample table and query seed table to delete
+		return db.delete(TABLE_SAMPLE, KEY_POSITION + "=" + num, null) > 0;
+	}
+
+	public void deleteAll() {
+		SQLiteDatabase db = this.getWritableDatabase();
+		db.delete(TABLE_SAMPLE, null, null);
+		db.delete(TABLE_SEED, null, null);
 	}
 }

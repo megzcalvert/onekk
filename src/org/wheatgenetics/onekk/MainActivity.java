@@ -1,9 +1,13 @@
 package org.wheatgenetics.onekk;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -16,6 +20,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.hardware.Camera;
+import android.hardware.Camera.PictureCallback;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
@@ -26,6 +32,7 @@ import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.speech.tts.TextToSpeech.OnInitListener;
 import android.util.Log;
 import android.view.Gravity;
@@ -40,6 +47,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -70,7 +78,7 @@ public class MainActivity extends Activity implements OnInitListener {
 	TextView weightHeader;
 	private Button setBox;
 	private EditText inputText;
-	TableLayout InventoryTable;
+	TableLayout OneKKTable;
 	MySQLiteHelper db;
 	String firstName = "";
 	String lastName = "";
@@ -78,41 +86,36 @@ public class MainActivity extends Activity implements OnInitListener {
 	int itemCount;
 	ScrollView sv1;
 	static int currentItemNum = 1;
+	private Camera mCamera;
+    private CameraPreview mPreview;
+    private String picName = null;
+    public static final int MEDIA_TYPE_IMAGE = 1;
+
+
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.scale);
+		setContentView(R.layout.main);
 		Log.v(TAG, "onCreate");
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		// Define UI elements
 		mSettings = getSharedPreferences(PREFS, 0);
-		sv1 = (ScrollView) findViewById(R.id.svData);
 		mUnitsText = mSettings.getString("unitsText", "grams");
-		mUnitsView = (TextView) findViewById(R.id.text_unit);
-		mUnitsView.setText(mUnitsText);
+		
+		inputText = (EditText) findViewById(R.id.etInput);
+				
 		mWeightEditText = (EditText) findViewById(R.id.text_weight);
 		mWeightEditText.setText("Not connected");
-		boxNumTextView = (TextView) findViewById(R.id.tvBoxNum);
-		boxNumTextView.setText("");
-		setBox = (Button) findViewById(R.id.btBox);
-		inputText = (EditText) findViewById(R.id.etInput);
-		boxHeader = (TextView) findViewById(R.id.tvBoxTable);
-		itemHeader = (TextView) findViewById(R.id.tvNumTable);
-		idHeader = (TextView) findViewById(R.id.tvIdTable);
-		weightHeader = (TextView) findViewById(R.id.tvWtTable);
-		InventoryTable = (TableLayout) findViewById(R.id.tlInventory);
+		
+		sv1 = (ScrollView) findViewById(R.id.svData);
+		OneKKTable = (TableLayout) findViewById(R.id.tlInventory);
+		
 		db = new MySQLiteHelper(this);
 
-		setBox.setOnClickListener(new View.OnClickListener() {
-			public void onClick(View v) {
-				setBoxDialog();
-			}
-		});
-
-		InventoryTable.setOnClickListener(new View.OnClickListener() {
+		OneKKTable.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 			}
 		});
@@ -129,6 +132,8 @@ public class MainActivity extends Activity implements OnInitListener {
 							InputMethodManager.HIDE_IMPLICIT_ONLY);
 					if (event.getAction() != KeyEvent.ACTION_DOWN)
 						return true;
+					picName = inputText.getText().toString();
+					takePic();
 					addRecord(); // Add the current record to the table
 					goToBottom();
 					inputText.requestFocus(); // Set focus back to Enter box
@@ -139,6 +144,8 @@ public class MainActivity extends Activity implements OnInitListener {
 						return true;
 					}
 					if (event.getAction() == KeyEvent.ACTION_UP) {
+						picName = inputText.getText().toString();
+						takePic();
 						addRecord(); // Add the current record to the table
 						goToBottom();
 					}
@@ -156,6 +163,7 @@ public class MainActivity extends Activity implements OnInitListener {
 							InputMethodManager.HIDE_IMPLICIT_ONLY);
 					if (event.getAction() != KeyEvent.ACTION_DOWN)
 						return true;
+					
 					addRecord(); // Add the current record to the table
 					goToBottom();
 					
@@ -179,13 +187,24 @@ public class MainActivity extends Activity implements OnInitListener {
 			}
 		});
 		
-		setPersonDialog();
-		findScale();
+		startCamera();		
+		//TODO don't forget to undo this
+		//setPersonDialog();
+		//findScale();
 		createDirectory();
 		parseDbToTable();
 		goToBottom();
 	}
 
+	private void startCamera() {
+		mCamera = getCameraInstance();
+        // Create our Preview view and set it as the content of our activity.
+        mPreview = new CameraPreview(this, mCamera);
+        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview.addView(mPreview);
+        
+	}
+	
 	private void goToBottom() {
 		sv1.post(new Runnable() {
 			public void run() {
@@ -196,7 +215,7 @@ public class MainActivity extends Activity implements OnInitListener {
 	}
 
 	private void parseDbToTable() {
-		InventoryTable.removeAllViews();
+		OneKKTable.removeAllViews();
 		list = db.getAllBooks();
 		itemCount = list.size();
 		if (itemCount != 0) {
@@ -230,16 +249,26 @@ public class MainActivity extends Activity implements OnInitListener {
 			weight = mWeightEditText.getText().toString();
 		}
 
-		db.addBook(new InventoryRecord(boxNumTextView.getText().toString(), inputText
-				.getText().toString(), personID, date, currentItemNum, weight)); // add
+		//db.addBook(new InventoryRecord(boxNumTextView.getText().toString(), inputText
+			//	.getText().toString(), personID, date, currentItemNum, weight)); // add
 																					// to
-																					// database
-
-		createNewTableEntry(boxNumTextView.getText().toString(),
-				currentItemNum, inputText.getText().toString(), weight);
+																	// database
+		
+		createNewTableEntry("5", currentItemNum, inputText.getText().toString(), weight);
 		currentItemNum++;
 	}
 
+	public static Camera getCameraInstance(){
+	    Camera c = null;
+	    try {
+	        c = Camera.open(); // attempt to get a Camera instance
+	    }
+	    catch (Exception e){
+	        // Camera is not available (in use or does not exist)
+	    }
+	    return c; // returns null if camera is unavailable
+	}
+	
 	private String getDate() {
 		String date = "";
 		Calendar c = Calendar.getInstance();
@@ -253,15 +282,6 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	/**
 	 * Adds a new entry to the end of the TableView
-	 * 
-	 * @param bn
-	 *            - Box ID
-	 * @param in
-	 *            - Position
-	 * @param en
-	 *            - Sample ID
-	 * @param wt
-	 *            - Sample weight
 	 */
 	private void createNewTableEntry(String bn, int in, String en, String wt) {
 		String tag = bn + "," + en + "," + in;
@@ -325,7 +345,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		tr.addView(boxNumTV);
 		tr.addView(envIDTV);
 		tr.addView(weightTV);
-		InventoryTable.addView(tr, new LayoutParams(
+		OneKKTable.addView(tr, new LayoutParams(
 				TableLayout.LayoutParams.MATCH_PARENT,
 				TableLayout.LayoutParams.MATCH_PARENT));
 	}
@@ -344,9 +364,9 @@ public class MainActivity extends Activity implements OnInitListener {
 				.setPositiveButton("Yes",
 						new DialogInterface.OnClickListener() {
 							public void onClick(DialogInterface dialog, int id) {
-								InventoryRecord temp = new InventoryRecord(fBox, fEnv, null, null,
+								SampleRecord temp = new SampleRecord(fBox, fEnv, null, null,
 										fNum, null);
-								db.deleteBook(temp);
+								db.deleteSample(temp);
 								parseDbToTable();
 							}
 						})
@@ -362,7 +382,7 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	private void createDirectory() {
 		try {
-			File myFile = new File("/sdcard/Inventory/");
+			File myFile = new File("/sdcard/OneKK/");
 			if (!myFile.exists()) {
 				if (!myFile.mkdirs()) {
 					Toast.makeText(getBaseContext(),
@@ -376,48 +396,26 @@ public class MainActivity extends Activity implements OnInitListener {
 		}
 	}
 
-	private void setBoxDialog() {
-		final AlertDialog.Builder alert = new AlertDialog.Builder(this);
-		final EditText input = new EditText(this);
-		input.setText(boxNumber);
-		input.selectAll();
-		input.setSingleLine();
-		alert.setTitle("Set Box");
-		alert.setView(input);
-		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				String value = input.getText().toString().trim();
-				boxNumTextView.setText(value);
-
-				InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-				imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
-			}
-		});
-
-		alert.setNegativeButton("Cancel",
-				new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						dialog.cancel();
-						InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-						imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
-					}
-				});
-		AlertDialog alertD = alert.create();
-		alertD.show();
-		alertD.getWindow().setLayout(600, 400);
-	}
-
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
 
 	}
-
+	
 	@Override
 	public void onStart() {
 		super.onStart();
 		Log.v(TAG, "onStart");
 
+	}
+	
+	@Override
+	public void onResume() {
+		super.onResume();
+		if (mCamera == null) {
+	        startCamera(); // Local method to handle camera initialization
+	    }
+		Log.v(TAG, "onResume");
 	}
 
 	@Override
@@ -434,6 +432,9 @@ public class MainActivity extends Activity implements OnInitListener {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
+		case R.id.capture:
+			takePic();
+			break;
 		case R.id.scaleConnect:
 			findScale();
 			break;
@@ -441,7 +442,7 @@ public class MainActivity extends Activity implements OnInitListener {
 			setPersonDialog();
 			break;
 		case R.id.export:
-			export();
+			exportCSV();
 			break;
 		case R.id.clearData:
 			clearDialog();
@@ -458,6 +459,90 @@ public class MainActivity extends Activity implements OnInitListener {
 		return true;
 	}
 
+	private void takePic() {
+		mCamera.takePicture(null, null, mPicture);
+	}
+	
+	private PictureCallback mPicture = new PictureCallback() {
+
+	    @Override
+	    public void onPictureTaken(byte[] data, Camera camera) {
+	    	
+	    	mCamera.startPreview();
+	    	
+	        File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+	        if (pictureFile == null){
+	            Log.d(TAG, "Error creating media file, check storage permissions");
+	            return;
+	        }
+
+	        try {
+	            FileOutputStream fos = new FileOutputStream(pictureFile);
+	            fos.write(data);
+	            fos.close();
+	        } catch (FileNotFoundException e) {
+	            Log.d(TAG, "File not found: " + e.getMessage());
+	        } catch (IOException e) {
+	            Log.d(TAG, "Error accessing file: " + e.getMessage());
+	        }
+	        
+	    }
+	};
+
+	/** Create a File for saving an image or video */
+	private File getOutputMediaFile(int type){
+
+	    File mediaStorageDir = new File(Environment.getExternalStorageDirectory(), "OneKK");
+	    // This location works best if you want the created images to be shared
+	    // between applications and persist after your app has been uninstalled.
+
+	    // Create the storage directory if it does not exist
+	    if (! mediaStorageDir.exists()){
+	        if (! mediaStorageDir.mkdirs()){
+	            Log.d("OneKK", "failed to create directory");
+	            return null;
+	        }
+	    }
+
+	    // Create a media file name
+	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+	    File mediaFile;
+	    String fileName = "";
+	    
+	    if (picName.length() > 0) {
+	    	fileName = picName + "_";
+	    }
+	    
+	    //imageAnalysis(mediaStorageDir.getPath() + File.separator + fileName +
+		//        "IMG_"+ timeStamp + ".jpg");
+	    
+	    if (type == MEDIA_TYPE_IMAGE){
+	        mediaFile = new File(mediaStorageDir.getPath() + File.separator + fileName +
+	        "IMG_"+ timeStamp + ".jpg");
+	    } else {
+	        return null;
+	    }
+
+	    return mediaFile;
+	}
+	
+	private void imageAnalysis(String photo) {
+		// TODO Auto-generated method stub
+		File picture = new File(photo);
+		makeToast(photo);		
+	}
+
+	private void releaseCamera(){
+        if (mCamera != null){
+        	mCamera.stopPreview(); 
+            mCamera.setPreviewCallback(null);
+            mPreview.getHolder().removeCallback(mPreview);
+            mCamera.release();
+            mCamera = null;
+        }
+    }
+
+	
 	private void helpDialog() {
 	}
 
@@ -468,7 +553,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		final View personView = inflater.inflate(R.layout.about, null);
 
 		alert.setCancelable(true);
-		alert.setTitle("About Inventory");
+		alert.setTitle("About OneKK");
 		alert.setView(personView);
 		alert.setNegativeButton("Ok", new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int whichButton) {
@@ -542,39 +627,6 @@ public class MainActivity extends Activity implements OnInitListener {
 		alert.show();
 	}
 
-	private void export() {
-		new AlertDialog.Builder(MainActivity.this)
-				.setTitle("Export Data")
-				.setMessage("How would you like to export the data?")
-				.setPositiveButton("Flat file (CSV)",
-						new DialogInterface.OnClickListener() {
-
-							public void onClick(DialogInterface dialog,
-									int which) {
-								exportCSV();
-							}
-
-						})
-				.setNeutralButton("Query file (SQL)",
-						new DialogInterface.OnClickListener() {
-
-							public void onClick(DialogInterface dialog,
-									int which) {
-								exportSQL();
-							}
-
-						})
-				.setNegativeButton("Cancel",
-						new DialogInterface.OnClickListener() {
-
-							public void onClick(DialogInterface dialog,
-									int which) {
-								dialog.cancel();
-							}
-
-						}).show();
-	}
-
 	private void exportCSV() {
 		Calendar c = Calendar.getInstance();
 		int year = c.get(Calendar.YEAR);
@@ -589,7 +641,7 @@ public class MainActivity extends Activity implements OnInitListener {
 
 		try {
 			File myFile;
-			myFile = new File("sdcard/Inventory/inventory_" + date + ".CSV");
+			myFile = new File("sdcard/OneKK/onekk_" + date + ".CSV");
 			if (myFile.exists()) {
 				for (int i = 0; i < 100; i++) // If the file already exists,
 												// rename it
@@ -598,56 +650,15 @@ public class MainActivity extends Activity implements OnInitListener {
 							+ Integer.toString(month) + "."
 							+ Integer.toString(day);
 					date += "_" + Integer.toString(i);
-					myFile = new File("sdcard/inventory/inventory_" + date
+					myFile = new File("sdcard/OneKK/onekk_" + date
 							+ ".CSV");
 					if (!myFile.exists()) {
 						break;
 					}
 				}
-				writeCSV("inventory_" + date + ".CSV");
+				writeCSV("onekk_" + date + ".CSV");
 			} else {
-				writeCSV("inventory_" + date + ".CSV");
-			}
-		} catch (Exception e) {
-			Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT)
-					.show();
-		}
-
-		dropTables();
-	}
-
-	private void exportSQL() {
-		Calendar c = Calendar.getInstance();
-		int year = c.get(Calendar.YEAR);
-		int month = c.get(Calendar.MONTH) + 1; // Months are numbered 0-11
-		int day = c.get(Calendar.DAY_OF_MONTH);
-		String date = year + "-" + month + "-" + day;
-
-		if (year == 0) { // database is empty
-			makeToast("Database currently empty.");
-			return;
-		}
-
-		try {
-			File myFile;
-			myFile = new File("sdcard/Inventory/inventory_" + date + ".SQL");
-			if (myFile.exists()) {
-				for (int i = 0; i < 100; i++) // If the file already exists,
-												// rename it
-				{ // with a "_#" suffix
-					date = Integer.toString(year) + "-"
-							+ Integer.toString(month) + "-"
-							+ Integer.toString(day);
-					date += "_" + Integer.toString(i);
-					myFile = new File("sdcard/inventory/inventory_" + date
-							+ ".SQL");
-					if (!myFile.exists()) {
-						break;
-					}
-				}
-				writeSQL("inventory_" + date + ".SQL");
-			} else {
-				writeSQL("inventory_" + date + ".SQL");
+				writeCSV("onekk_" + date + ".CSV");
 			}
 		} catch (Exception e) {
 			Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT)
@@ -664,7 +675,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		itemCount = list.size();
 		if (itemCount != 0) {
 			try {
-				myFile = new File("sdcard/inventory/" + filename);
+				myFile = new File("sdcard/OneKK/" + filename);
 				myFile.createNewFile();
 				FileOutputStream fOut = new FileOutputStream(myFile);
 				OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
@@ -697,102 +708,27 @@ public class MainActivity extends Activity implements OnInitListener {
 		shareFile(filename);
 		dropTables();
 	}
-
-	private void writeSQL(String filename) {
-		String record;
-		String boxList = "";
-		File myFile = null;
-		list = db.getAllBooks();
-		itemCount = list.size();
-
-		String[] boxes = db.getBoxList();
-
-		if (itemCount != 0) {
-			try {
-				myFile = new File("sdcard/inventory/" + filename);
-				myFile.createNewFile();
-				FileOutputStream fOut = new FileOutputStream(myFile);
-				OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
-
-				// get boxes
-				for (int i = 0; i < boxes.length; i++) {
-					if (i == boxes.length - 1 && boxes[i] != null) {
-						boxList = boxList + "'" + boxes[i] + "'";
-					} else if (boxes[i] != null) {
-						boxList = boxList + "'" + boxes[i] + "'" + ",";
-					}
-				}
-
-				record = "DELETE FROM seedinv WHERE seedinv.box_id in ("
-						+ boxList + ");\n";
-				record += "INSERT INTO seedinv(`box_id`,`seed_id`,`inventory_date`,`inventory_person`,`weight_gram`)\r\nVALUES";
-				myOutWriter.append(record);
-
-				for (int i = 0; i < itemCount; i++) {
-					String[] temp = list.get(i).toString().split(",");
-
-					for (int j = 0; j < temp.length; j++) {
-						if (temp[j].length() == 0) {
-							temp[j] = "null";
-						}
-					}
-
-					record = "(";
-					record += addTicks(temp[0]) + ","; // box
-					record += addTicks(temp[1]) + ","; // seed id
-					record += addTicks(temp[3]) + ","; // date
-					record += addTicks(temp[2]) + ","; // person
-					record += addTicks(temp[5]); // weight
-					record += ")";
-					
-					if(i==itemCount-1){
-						record+=";\r\n";
-					} else {
-						record+=",\r\n";
-					}
-					
-					myOutWriter.append(record);
-				}
-				myOutWriter.close();
-				fOut.close();
-				makeFileDiscoverable(myFile,this);				
-				
-				makeToast("File exported successfully.");
-			} catch (Exception e) {
-				Toast.makeText(getBaseContext(), e.getMessage(),
-						Toast.LENGTH_SHORT).show();
-			}
-
-		}
-		db.close();
-		shareFile(filename);
-		dropTables();
-	}
 	
+	@Override
+    protected void onPause() {
+        super.onPause();
+        releaseCamera();              // release the camera immediately on pause event
+    }
+
 	public void makeFileDiscoverable(File file, Context context){
 		MediaScannerConnection.scanFile(context, new String[]{file.getPath()}, null, null);
 		context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
                 Uri.fromFile(file)));
 	}
-
-	private String addTicks(String entry) {
-		String newEntry;
-		if(entry.contains("null")) {
-			newEntry = "null";
-		} else {
-			newEntry = "'" + entry + "'";
-		}
-		return newEntry;
-	}
 	
 	private void dropTables() {
-		db.deleteAllBooks();
-		InventoryTable.removeAllViews();
+		db.deleteAll();
+		OneKKTable.removeAllViews();
 		currentItemNum = 1;
 	}
 
 	private void shareFile(String filePath) {
-		filePath = "sdcard/inventory/" + filePath;
+		filePath = "sdcard/OneKK/" + filePath;
 		Intent intent = new Intent();
 		intent.setAction(android.content.Intent.ACTION_SEND);
 		intent.setType("text/plain");
