@@ -12,14 +12,27 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import org.bytedeco.javacpp.opencv_core.Mat;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.Scalar;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+import org.wheatgenetics.imageprocess.ImgProcess1KK;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.usb.UsbConstants;
@@ -45,9 +58,9 @@ import android.view.View.OnLongClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -56,28 +69,34 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity implements OnInitListener {
 
-	public final static String TAG = "ScaleActivity";
+	public final static String TAG = "OneKK";
 	public final static String PREFS = "PREFS";
-	private SharedPreferences mSettings;
+
 	private UsbDevice mDevice;
 	private double mWeightGrams = 0;
 	private double mZeroGrams = 0;
-	private String mUnitsText = "grams";
-	private String boxNumber;
+
 	private String personID;
-	private TextView mUnitsView;
+	String photoName;
+	
 	private EditText mWeightEditText;
+	private EditText inputText;
+
 	private TextView boxNumTextView;
+
+	TextView sampleName;
+	TextView numSeeds;
+	TextView avgLength;
+	TextView avgWidth;
+	TextView avgArea;
+
 	TextView boxNumTV;
-	TextView itemNumTV;
 	TextView envIDTV;
 	TextView weightTV;
 	TextView boxHeader;
 	TextView itemHeader;
 	TextView idHeader;
-	TextView weightHeader;
-	private Button setBox;
-	private EditText inputText;
+
 	TableLayout OneKKTable;
 	MySQLiteHelper db;
 	String firstName = "";
@@ -87,11 +106,9 @@ public class MainActivity extends Activity implements OnInitListener {
 	ScrollView sv1;
 	static int currentItemNum = 1;
 	private Camera mCamera;
-    private CameraPreview mPreview;
-    private String picName = null;
-    public static final int MEDIA_TYPE_IMAGE = 1;
-
-
+	private CameraPreview mPreview;
+	private String picName = null;
+	public static final int MEDIA_TYPE_IMAGE = 1;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -100,19 +117,15 @@ public class MainActivity extends Activity implements OnInitListener {
 		Log.v(TAG, "onCreate");
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-		// Define UI elements
-		mSettings = getSharedPreferences(PREFS, 0);
-		mUnitsText = mSettings.getString("unitsText", "grams");
 		
 		inputText = (EditText) findViewById(R.id.etInput);
-				
+
 		mWeightEditText = (EditText) findViewById(R.id.text_weight);
 		mWeightEditText.setText("Not connected");
-		
+
 		sv1 = (ScrollView) findViewById(R.id.svData);
 		OneKKTable = (TableLayout) findViewById(R.id.tlInventory);
-		
+
 		db = new MySQLiteHelper(this);
 
 		OneKKTable.setOnClickListener(new View.OnClickListener() {
@@ -138,7 +151,7 @@ public class MainActivity extends Activity implements OnInitListener {
 					goToBottom();
 					inputText.requestFocus(); // Set focus back to Enter box
 				}
-				
+
 				if (keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
 					if (event.getAction() == KeyEvent.ACTION_DOWN) {
 						return true;
@@ -163,16 +176,16 @@ public class MainActivity extends Activity implements OnInitListener {
 							InputMethodManager.HIDE_IMPLICIT_ONLY);
 					if (event.getAction() != KeyEvent.ACTION_DOWN)
 						return true;
-					
+
 					addRecord(); // Add the current record to the table
 					goToBottom();
-					
-					if(mDevice != null) {
-					mWeightEditText.setText("");
+
+					if (mDevice != null) {
+						mWeightEditText.setText("");
 					}
 					inputText.requestFocus(); // Set focus back to Enter box
 				}
-				
+
 				if (keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
 					if (event.getAction() == KeyEvent.ACTION_DOWN) {
 						return true;
@@ -186,25 +199,43 @@ public class MainActivity extends Activity implements OnInitListener {
 				return false;
 			}
 		});
-		
-		startCamera();		
-		//TODO don't forget to undo this
-		//setPersonDialog();
-		//findScale();
+
+		startCamera();
+		// TODO don't forget to undo this
+		// setPersonDialog();
+		// findScale();
 		createDirectory();
-		parseDbToTable();
+		// parseDbToTable();
 		goToBottom();
+		
+		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
 	}
+	
+	private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this){
+	    @Override
+	    public void onManagerConnected(int status){
+	        switch(status){
+	            case LoaderCallbackInterface.SUCCESS:
+	            {
+	                Log.i("onekk", "OpenCV loaded");
+	            }break;
+	            default:
+	            {
+	                super.onManagerConnected(status);
+	            }break;
+	        }   
+	    }
+	};
 
 	private void startCamera() {
 		mCamera = getCameraInstance();
-        // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
-        
+		// Create our Preview view and set it as the content of our activity.
+		mPreview = new CameraPreview(this, mCamera);
+		FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+		preview.addView(mPreview);
+
 	}
-	
+
 	private void goToBottom() {
 		sv1.post(new Runnable() {
 			public void run() {
@@ -243,32 +274,31 @@ public class MainActivity extends Activity implements OnInitListener {
 		}
 
 		String weight;
-		if (mDevice == null && mWeightEditText.getText().toString().equals("Not connected")) {
+		if (mDevice == null
+				&& mWeightEditText.getText().toString().equals("Not connected")) {
 			weight = "null";
 		} else {
 			weight = mWeightEditText.getText().toString();
 		}
 
-		//db.addBook(new InventoryRecord(boxNumTextView.getText().toString(), inputText
-			//	.getText().toString(), personID, date, currentItemNum, weight)); // add
-																					// to
-																	// database
-		
-		createNewTableEntry("5", currentItemNum, inputText.getText().toString(), weight);
+		db.addSampleRecord(new SampleRecord(inputText.getText().toString(),
+				currentItemNum, null, personID, date, weight));
+
+		createNewTableEntry("5", currentItemNum,
+				inputText.getText().toString(), weight);
 		currentItemNum++;
 	}
 
-	public static Camera getCameraInstance(){
-	    Camera c = null;
-	    try {
-	        c = Camera.open(); // attempt to get a Camera instance
-	    }
-	    catch (Exception e){
-	        // Camera is not available (in use or does not exist)
-	    }
-	    return c; // returns null if camera is unavailable
+	public static Camera getCameraInstance() {
+		Camera c = null;
+		try {
+			c = Camera.open(); // attempt to get a Camera instance
+		} catch (Exception e) {
+			// Camera is not available (in use or does not exist)
+		}
+		return c; // returns null if camera is unavailable
 	}
-	
+
 	private String getDate() {
 		String date = "";
 		Calendar c = Calendar.getInstance();
@@ -284,46 +314,60 @@ public class MainActivity extends Activity implements OnInitListener {
 	 * Adds a new entry to the end of the TableView
 	 */
 	private void createNewTableEntry(String bn, int in, String en, String wt) {
-		String tag = bn + "," + en + "," + in;
 		inputText.setText("");
-		
-		
+
 		/* Create a new row to be added. */
 		TableRow tr = new TableRow(this);
 		tr.setLayoutParams(new TableLayout.LayoutParams(
 				LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
-		/* Create the item number field */
-		itemNumTV = new TextView(this);
-		itemNumTV.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-		itemNumTV.setTextColor(Color.BLACK);
-		itemNumTV.setTextSize(20.0f);
-		itemNumTV.setText("" + in);
-		itemNumTV.setLayoutParams(new TableRow.LayoutParams(0,
-				LayoutParams.WRAP_CONTENT, 0.16f));
+		/* Create the sample name field */
+		sampleName = new TextView(this);
+		sampleName.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+		sampleName.setTextColor(Color.BLACK);
+		sampleName.setTextSize(20.0f);
+		sampleName.setText(en);
+		sampleName.setLayoutParams(new TableRow.LayoutParams(0,
+				LayoutParams.WRAP_CONTENT, 0.4f));
 
-		/* Create the box number field */
-		boxNumTV = new TextView(this);
-		boxNumTV.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-		boxNumTV.setTextColor(Color.BLACK);
-		boxNumTV.setTextSize(20.0f);
-		boxNumTV.setText(bn);
-		boxNumTV.setLayoutParams(new TableRow.LayoutParams(0,
-				LayoutParams.WRAP_CONTENT, 0.16f));
+		/* Create the number of seeds field */
+		numSeeds = new TextView(this);
+		numSeeds.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+		numSeeds.setTextColor(Color.BLACK);
+		numSeeds.setTextSize(20.0f);
+		numSeeds.setText(bn);
+		numSeeds.setLayoutParams(new TableRow.LayoutParams(0,
+				LayoutParams.WRAP_CONTENT, 0.12f));
 
-		/* Create the Envelope ID field */
-		envIDTV = new TextView(this);
-		envIDTV.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-		envIDTV.setTextColor(Color.BLACK);
-		envIDTV.setTextSize(20.0f);
-		envIDTV.setText(en);
-		envIDTV.setTag(tag);
-		envIDTV.setLayoutParams(new TableRow.LayoutParams(0,
-				LayoutParams.WRAP_CONTENT, 0.5f));
-		envIDTV.setLongClickable(true);
+		/* Create the length field */
+		avgLength = new TextView(this);
+		avgLength.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+		avgLength.setTextColor(Color.BLACK);
+		avgLength.setTextSize(20.0f);
+		avgLength.setText(bn);
+		avgLength.setLayoutParams(new TableRow.LayoutParams(0,
+				LayoutParams.WRAP_CONTENT, 0.12f));
+
+		/* Create the width field */
+		avgWidth = new TextView(this);
+		avgWidth.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+		avgWidth.setTextColor(Color.BLACK);
+		avgWidth.setTextSize(20.0f);
+		avgWidth.setText(bn);
+		avgWidth.setLayoutParams(new TableRow.LayoutParams(0,
+				LayoutParams.WRAP_CONTENT, 0.12f));
+
+		/* Create the area field */
+		avgArea = new TextView(this);
+		avgArea.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+		avgArea.setTextColor(Color.BLACK);
+		avgArea.setTextSize(20.0f);
+		avgArea.setText(bn);
+		avgArea.setLayoutParams(new TableRow.LayoutParams(0,
+				LayoutParams.WRAP_CONTENT, 0.12f));
 
 		/* Define the listener for the longclick event */
-		envIDTV.setOnLongClickListener(new OnLongClickListener() {
+		sampleName.setOnLongClickListener(new OnLongClickListener() {
 			public boolean onLongClick(View v) {
 				final String tag = (String) v.getTag();
 				deleteDialog(tag);
@@ -331,41 +375,31 @@ public class MainActivity extends Activity implements OnInitListener {
 			}
 		});
 
-		/* Create the Weight field */
-		weightTV = new TextView(this);
-		weightTV.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-		weightTV.setTextColor(Color.BLACK);
-		weightTV.setTextSize(20.0f);
-		weightTV.setText(wt);
-		weightTV.setLayoutParams(new TableRow.LayoutParams(0,
-				LayoutParams.WRAP_CONTENT, 0.16f));
-
 		/* Add UI elements to row and add row to table */
-		tr.addView(itemNumTV);
-		tr.addView(boxNumTV);
-		tr.addView(envIDTV);
-		tr.addView(weightTV);
-		OneKKTable.addView(tr, new LayoutParams(
+		tr.addView(sampleName);
+		tr.addView(numSeeds);
+		tr.addView(avgLength);
+		tr.addView(avgWidth);
+		tr.addView(avgArea);
+		OneKKTable.addView(tr, 0, new LayoutParams( // Adds row to top of table
 				TableLayout.LayoutParams.MATCH_PARENT,
 				TableLayout.LayoutParams.MATCH_PARENT));
 	}
 
 	private void deleteDialog(String tag) {
 		final String tagArray[] = tag.split(",");
-		final String fBox = tagArray[0];
 		final String fEnv = tagArray[1];
 		final int fNum = Integer.parseInt(tagArray[2]);
 
-		AlertDialog.Builder builder = new AlertDialog.Builder(
-				MainActivity.this);
+		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 		builder.setTitle("Delete Entry");
 		builder.setMessage("Delete " + fEnv + "?")
 				.setCancelable(true)
 				.setPositiveButton("Yes",
 						new DialogInterface.OnClickListener() {
 							public void onClick(DialogInterface dialog, int id) {
-								SampleRecord temp = new SampleRecord(fBox, fEnv, null, null,
-										fNum, null);
+								SampleRecord temp = new SampleRecord(fEnv,
+										fNum, null, null, null, null);
 								db.deleteSample(temp);
 								parseDbToTable();
 							}
@@ -401,20 +435,23 @@ public class MainActivity extends Activity implements OnInitListener {
 		super.onDestroy();
 
 	}
-	
+
 	@Override
 	public void onStart() {
 		super.onStart();
+		if (mCamera == null) {
+			startCamera(); // Local method to handle camera initialization
+		}
 		Log.v(TAG, "onStart");
 
 	}
-	
+
 	@Override
 	public void onResume() {
 		super.onResume();
 		if (mCamera == null) {
-	        startCamera(); // Local method to handle camera initialization
-	    }
+			startCamera(); // Local method to handle camera initialization
+		}
 		Log.v(TAG, "onResume");
 	}
 
@@ -434,6 +471,9 @@ public class MainActivity extends Activity implements OnInitListener {
 		switch (item.getItemId()) {
 		case R.id.capture:
 			takePic();
+			break;
+		case R.id.testAnalysis:
+			postImageDialog("new.jpg");
 			break;
 		case R.id.scaleConnect:
 			findScale();
@@ -460,89 +500,122 @@ public class MainActivity extends Activity implements OnInitListener {
 	}
 
 	private void takePic() {
+		inputText.setEnabled(false);
 		mCamera.takePicture(null, null, mPicture);
 	}
-	
+
 	private PictureCallback mPicture = new PictureCallback() {
 
-	    @Override
-	    public void onPictureTaken(byte[] data, Camera camera) {
-	    	
-	    	mCamera.startPreview();
-	    	
-	        File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-	        if (pictureFile == null){
-	            Log.d(TAG, "Error creating media file, check storage permissions");
-	            return;
-	        }
+		@Override
+		public void onPictureTaken(byte[] data, Camera camera) {
 
-	        try {
-	            FileOutputStream fos = new FileOutputStream(pictureFile);
-	            fos.write(data);
-	            fos.close();
-	        } catch (FileNotFoundException e) {
-	            Log.d(TAG, "File not found: " + e.getMessage());
-	        } catch (IOException e) {
-	            Log.d(TAG, "Error accessing file: " + e.getMessage());
-	        }
-	        
-	    }
+			File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+
+			try {
+				FileOutputStream fos = new FileOutputStream(pictureFile);
+				fos.write(data);
+				fos.close();
+			} catch (FileNotFoundException e) {
+				Log.d(TAG, "File not found: " + e.getMessage());
+			} catch (IOException e) {
+				Log.d(TAG, "Error accessing file: " + e.getMessage());
+			}
+
+			Uri outputFileUri = Uri.fromFile(pictureFile);
+			imageAnalysis(outputFileUri);
+			
+			mCamera.startPreview();
+			
+			inputText.setEnabled(true);
+			inputText.requestFocus();
+			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.showSoftInput(inputText, InputMethodManager.SHOW_IMPLICIT);
+		}
 	};
 
 	/** Create a File for saving an image or video */
-	private File getOutputMediaFile(int type){
+	private File getOutputMediaFile(int type) {
 
-	    File mediaStorageDir = new File(Environment.getExternalStorageDirectory(), "OneKK");
-	    // This location works best if you want the created images to be shared
-	    // between applications and persist after your app has been uninstalled.
+		File mediaStorageDir = new File(
+				Environment.getExternalStorageDirectory(), "OneKK");
+		// This location works best if you want the created images to be shared
+		// between applications and persist after your app has been uninstalled.
 
-	    // Create the storage directory if it does not exist
-	    if (! mediaStorageDir.exists()){
-	        if (! mediaStorageDir.mkdirs()){
-	            Log.d("OneKK", "failed to create directory");
-	            return null;
-	        }
-	    }
+		// Create the storage directory if it does not exist
+		if (!mediaStorageDir.exists()) {
+			if (!mediaStorageDir.mkdirs()) {
+				Log.d("OneKK", "failed to create directory");
+				return null;
+			}
+		}
 
-	    // Create a media file name
-	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-	    File mediaFile;
-	    String fileName = "";
-	    
-	    if (picName.length() > 0) {
-	    	fileName = picName + "_";
-	    }
-	    
-	    //imageAnalysis(mediaStorageDir.getPath() + File.separator + fileName +
-		//        "IMG_"+ timeStamp + ".jpg");
-	    
-	    if (type == MEDIA_TYPE_IMAGE){
-	        mediaFile = new File(mediaStorageDir.getPath() + File.separator + fileName +
-	        "IMG_"+ timeStamp + ".jpg");
-	    } else {
-	        return null;
-	    }
+		// Create a media file name
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
+				.format(new Date());
+		File mediaFile;
 
-	    return mediaFile;
-	}
-	
-	private void imageAnalysis(String photo) {
-		// TODO Auto-generated method stub
-		File picture = new File(photo);
-		makeToast(photo);		
+		String fileName = "";
+		
+		if (picName.length() > 0) {
+			fileName = picName + "_";
+		}
+
+		mediaFile = new File(mediaStorageDir.getPath() + File.separator
+				+ fileName + "IMG_" + timeStamp + ".jpg");
+
+		return mediaFile;
+
 	}
 
-	private void releaseCamera(){
-        if (mCamera != null){
-        	mCamera.stopPreview(); 
-            mCamera.setPreviewCallback(null);
-            mPreview.getHolder().removeCallback(mPreview);
-            mCamera.release();
-            mCamera = null;
-        }
-    }
-
+	private void imageAnalysis(Uri photo) {
+		photoName = photo.getLastPathSegment().toString();
+		
+	    ImgProcess1KK imgP = new ImgProcess1KK(Environment.getExternalStorageDirectory().toString()+ "/OneKK/" + photoName, 1);
+	    imgP.writeProcessedImg(Environment.getExternalStorageDirectory().toString() + "/OneKK/" + photoName + "_new.jpg");
+	    
+	    postImageDialog(photoName);
+	}
 	
+	private void postImageDialog(String imageName) {
+		final AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+		LayoutInflater inflater = this.getLayoutInflater();
+		final View personView = inflater.inflate(R.layout.post_image, null);
+		
+		File imgFile = new File(Environment.getExternalStorageDirectory().toString() + "/OneKK/" + imageName + "_new.jpg");
+		
+		if(imgFile.exists()) {
+			ImageView imgView = (ImageView) personView.findViewById(R.id.postImage);
+			Bitmap bmImg = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
+			
+			Matrix matrix = new Matrix();
+		    matrix.postRotate(90);
+		    Bitmap rbmImg = Bitmap.createBitmap(bmImg, 0, 0, bmImg.getWidth(), bmImg.getHeight(), matrix, true);
+		      
+			imgView.setImageBitmap(rbmImg);
+		}
+		
+		alert.setCancelable(true);
+		alert.setTitle("Analysis Preview");
+		alert.setView(personView);
+		alert.setNegativeButton("Ok", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				dialog.dismiss();
+			}
+		});
+		alert.show();
+	}
+
+	private void releaseCamera() {
+		if (mCamera != null) {
+			mCamera.stopPreview();
+			mCamera.setPreviewCallback(null);
+			mPreview.getHolder().removeCallback(mPreview);
+			mCamera.release();
+			mCamera = null;
+		}
+	}
+
 	private void helpDialog() {
 	}
 
@@ -604,8 +677,7 @@ public class MainActivity extends Activity implements OnInitListener {
 	}
 
 	private void clearDialog() {
-		AlertDialog.Builder builder = new AlertDialog.Builder(
-				MainActivity.this);
+		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 		builder.setMessage(
 				"This will delete all data from the database. Proceed?")
 				.setCancelable(false)
@@ -650,8 +722,7 @@ public class MainActivity extends Activity implements OnInitListener {
 							+ Integer.toString(month) + "."
 							+ Integer.toString(day);
 					date += "_" + Integer.toString(i);
-					myFile = new File("sdcard/OneKK/onekk_" + date
-							+ ".CSV");
+					myFile = new File("sdcard/OneKK/onekk_" + date + ".CSV");
 					if (!myFile.exists()) {
 						break;
 					}
@@ -696,7 +767,7 @@ public class MainActivity extends Activity implements OnInitListener {
 				}
 				myOutWriter.close();
 				fOut.close();
-				makeFileDiscoverable(myFile,this);
+				makeFileDiscoverable(myFile, this);
 				makeToast("File exported successfully.");
 			} catch (Exception e) {
 				Toast.makeText(getBaseContext(), e.getMessage(),
@@ -708,19 +779,20 @@ public class MainActivity extends Activity implements OnInitListener {
 		shareFile(filename);
 		dropTables();
 	}
-	
-	@Override
-    protected void onPause() {
-        super.onPause();
-        releaseCamera();              // release the camera immediately on pause event
-    }
 
-	public void makeFileDiscoverable(File file, Context context){
-		MediaScannerConnection.scanFile(context, new String[]{file.getPath()}, null, null);
-		context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
-                Uri.fromFile(file)));
+	@Override
+	protected void onPause() {
+		super.onPause();
+		releaseCamera(); // release the camera immediately on pause event
 	}
-	
+
+	public void makeFileDiscoverable(File file, Context context) {
+		MediaScannerConnection.scanFile(context,
+				new String[] { file.getPath() }, null, null);
+		context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+				Uri.fromFile(file)));
+	}
+
 	private void dropTables() {
 		db.deleteAll();
 		OneKKTable.removeAllViews();
@@ -846,10 +918,10 @@ public class MainActivity extends Activity implements OnInitListener {
 					return null;
 				}
 
-				if(mDevice.getProductId()==519){
-					mWeightGrams = (weightLSB + weightMSB * 256.0)/10.0;
+				if (mDevice.getProductId() == 519) {
+					mWeightGrams = (weightLSB + weightMSB * 256.0) / 10.0;
 				} else {
-					mWeightGrams = (weightLSB + weightMSB * 256.0);	
+					mWeightGrams = (weightLSB + weightMSB * 256.0);
 				}
 				double zWeight = (mWeightGrams - mZeroGrams);
 

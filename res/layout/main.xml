@@ -75,18 +75,82 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content" >
 
-        <ScrollView
-            android:id="@+id/svData"
+        <TableLayout
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:background="#FFFFFF" >
+            android:layout_height="wrap_content" >
 
-            <TableLayout
-                android:id="@+id/tlInventory"
+            <TableRow
+                android:id="@+id/tableRowTitles"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" >
-            </TableLayout>
-        </ScrollView>
+
+                <TextView
+                    android:id="@+id/tvSampleName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:gravity="center"
+                    android:text="Sample"
+                    android:textSize="20dp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvNumSeeds"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".12"
+                    android:gravity="center"
+                    android:text="Seeds"
+                    android:textSize="20dp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAvgLen"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".12"
+                    android:gravity="center"
+                    android:text="Len."
+                    android:textSize="20dp"
+                    android:textStyle="bold" />
+                
+                
+                <TextView
+                    android:id="@+id/tvAvgWid"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".12"
+                    android:gravity="center"
+                    android:text="Wid."
+                    android:textSize="20dp"
+                    android:textStyle="bold" />
+                
+                <TextView
+                    android:id="@+id/tvAvgArea"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".12"
+                    android:gravity="center"
+                    android:text="Area"
+                    android:textSize="20dp"
+                    android:textStyle="bold" />
+                
+            </TableRow>
+
+            <ScrollView
+                android:id="@+id/svData"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="15dp"
+                android:background="#FFFFFF" >
+
+                <TableLayout
+                    android:id="@+id/tlInventory"
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent" >
+                </TableLayout>
+            </ScrollView>
+        </TableLayout>
     </LinearLayout>
 
 </LinearLayout>

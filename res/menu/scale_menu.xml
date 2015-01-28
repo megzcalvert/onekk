@@ -7,6 +7,11 @@
         android:showAsAction="always"
         android:title="Capture"/>
     <item
+        android:id="@+id/testAnalysis"
+        android:icon="@drawable/ic_action_brightness_high"
+        android:showAsAction="always"
+        android:title="Test"/>
+    <item
         android:id="@+id/export"
         android:icon="@drawable/ic_action_save"
         android:showAsAction="always|withText"

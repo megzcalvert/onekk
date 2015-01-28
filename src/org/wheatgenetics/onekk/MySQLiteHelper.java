@@ -56,6 +56,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 	private static final String SEED_CIRC = "circularity";
 	private static final String SEED_AREA = "area";
 	private static final String SEED_COL = "color";
+	private static final String SEED_WT = "weight";
 
 	// Sample table columns names
 	private static final String KEY_ID = "id";
@@ -81,12 +82,12 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 		// 2. create ContentValues to add key "column"/value
 		ContentValues values = new ContentValues();
 		
-		values.put(SAMPLE_ID, sample.getBox());
-		values.put(SAMPLE_SID, sample.getEnvID());
-		values.put(SAMPLE_PHOTO, sample.getPersonID());
-		values.put(SAMPLE_PERSON, sample.getDate());
-		values.put(SAMPLE_TIME, sample.getWt());
-		values.put(SAMPLE_WT, sample.getPosition());
+		values.put(SAMPLE_ID, sample.getId());
+		values.put(SAMPLE_SID, sample.getSampleId());
+		values.put(SAMPLE_PHOTO, sample.getPhoto());
+		values.put(SAMPLE_PERSON, sample.getPersonId());
+		values.put(SAMPLE_TIME, sample.getTimestamp());
+		values.put(SAMPLE_WT, sample.getWeight());
 		
 		// 3. insert
 		db.insert(TABLE_SAMPLE,null,values);
@@ -104,14 +105,15 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
 		// 2. create ContentValues to add key "column"/value
 		ContentValues values = new ContentValues();
-		values.put(SEED_ID, seed.getBox());
-		values.put(SEED_SID, seed.getEnvID());
-		values.put(SEED_LEN, seed.getPersonID());
-		values.put(SEED_WID, seed.getDate());
-		values.put(SEED_DIAM, seed.getPosition());
-		values.put(SEED_CIRC, seed.getWt());
-		values.put(SEED_AREA, seed.getWt());
-		values.put(SEED_COL, seed.getWt());
+		values.put(SEED_ID, seed.getId());
+		values.put(SEED_SID, seed.getSampleId());
+		values.put(SEED_LEN, seed.getLength());
+		values.put(SEED_WID, seed.getWidth());
+		values.put(SEED_DIAM, seed.getDiameter());
+		values.put(SEED_CIRC, seed.getCircularity());
+		values.put(SEED_AREA, seed.getArea());
+		values.put(SEED_COL, seed.getColor());
+		values.put(SEED_WT, seed.getWeight());
 		
 		// 3. insert
 		db.insert(TABLE_SEED, null, values);

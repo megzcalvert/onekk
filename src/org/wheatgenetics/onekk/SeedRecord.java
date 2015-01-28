@@ -1,27 +1,30 @@
 package org.wheatgenetics.onekk;
 
 public class SeedRecord {
-
+	
 	private int id;
-	private String mBoxID;
-	private String mEnvID;
-	private String mPersonID;
-	private String mDate;
-	private int mPosition;
-	private String mWt;
+	private String sampleId;
+	private String length;
+	private String width;
+	private String diameter;
+	private String circularity;
+	private String color;
+	private String area;
+	private String weight;
 
 	public SeedRecord() {
 	}
 
-	public SeedRecord(String mBoxID, String mEnvID, String mPersonID, String mDate,
-			int mPosition, String mWt) {
+	public SeedRecord(String sampleId, String length, String width, String diameter, String circularity, String color, String area, String weight) {
 		super();
-		this.mBoxID = mBoxID;
-		this.mEnvID = mEnvID;
-		this.mPersonID = mPersonID;
-		this.mDate = mDate;
-		this.mPosition = mPosition;
-		this.mWt = mWt;
+		this.sampleId = sampleId;
+		this.length = length;
+		this.width = width;
+		this.diameter = diameter;
+		this.circularity = circularity;
+		this.color = color;
+		this.area = area;
+		this.weight = weight;
 	}
 
 	public int getId() {
@@ -31,58 +34,73 @@ public class SeedRecord {
 	public void setId(int id) {
 		this.id = id;
 	}
-
-	public String getBox() {
-		return mBoxID;
-	}
-
-	public void setBox(String title) {
-		this.mBoxID = title;
-	}
-
-	public String getEnvID() {
-		return mEnvID;
-	}
-
-	public void setEnvID(String author) {
-		this.mEnvID = author;
-	}
-
-	public String getPersonID() {
-		return mPersonID;
-	}
-
-	public void setPersonID(String author) {
-		this.mPersonID = author;
-	}
-
 	
-	public void setDate(String author) {
-		this.mDate = author;
+	public String getSampleId() {
+		return sampleId;
 	}
 
-	public String getDate() {
-		return mDate;
+	public void setSampleId(int id) {
+		this.sampleId = sampleId;
 	}
 
-	public int getPosition() {
-		return mPosition;
+	public String getLength() {
+		return length;
 	}
 
-	public void setPosition(int author) {
-		this.mPosition = author;
+	public void setLength(String length) {
+		this.length = length;
 	}
 
-	public String getWt() {
-		return mWt;
+	public String getWidth() {
+		return width;
 	}
 
-	public void setWt(String author) {
-		this.mWt = author;
+	public void setWidth(String width) {
+		this.width = width;
+	}
+
+	public String getDiameter() {
+		return diameter;
+	}
+
+	public void setDiameter(String diameter) {
+		this.diameter = diameter;
+	}
+
+	public void setCircularity(String circularity) {
+		this.circularity = circularity;
+	}
+
+	public String getCircularity() {
+		return circularity;
+	}
+
+	public String getColor() {
+		return color;
+	}
+
+	public void setColor(String color) {
+		this.color = color;
+	}
+	
+	public String getArea() {
+		return area;
+	}
+
+	public void setArea(String area) {
+		this.area = area;
+	}
+	
+	public String getWeight() {
+		return weight;
+	}
+
+	public void setWeight(String weight) {
+		this.weight = weight;
 	}
 
 	@Override
 	public String toString() {
-		return mBoxID + "," + mEnvID + "," + mPersonID + "," + mDate + "," + mPosition + "," + mWt;
+		return sampleId + "," + length + "," + width + "," + diameter + "," + circularity + "," + color  + "," + area  + "," + weight;
 	}
 }

@@ -3,25 +3,23 @@ package org.wheatgenetics.onekk;
 public class SampleRecord {
 
 	private int id;
-	private String mBoxID;
-	private String mEnvID;
-	private String mPersonID;
-	private String mDate;
-	private int mPosition;
-	private String mWt;
-
+	private int position;
+	private String sampleId;
+	private String photo;
+	private String personId;
+	private String timestamp;
+	private String weight;
+	
 	public SampleRecord() {
 	}
-
-	public SampleRecord(String mBoxID, String mEnvID, String mPersonID, String mDate,
-			int mPosition, String mWt) {
+	
+	public SampleRecord(String sampleId, int position, String photo, String personId, String timestamp, String weight) {
 		super();
-		this.mBoxID = mBoxID;
-		this.mEnvID = mEnvID;
-		this.mPersonID = mPersonID;
-		this.mDate = mDate;
-		this.mPosition = mPosition;
-		this.mWt = mWt;
+		this.sampleId = sampleId;
+		this.photo = photo;
+		this.personId = personId;
+		this.timestamp = timestamp;
+		this.weight = weight;
 	}
 
 	public int getId() {
@@ -31,58 +29,57 @@ public class SampleRecord {
 	public void setId(int id) {
 		this.id = id;
 	}
-
-	public String getBox() {
-		return mBoxID;
-	}
-
-	public void setBox(String title) {
-		this.mBoxID = title;
-	}
-
-	public String getEnvID() {
-		return mEnvID;
-	}
-
-	public void setEnvID(String author) {
-		this.mEnvID = author;
-	}
-
-	public String getPersonID() {
-		return mPersonID;
-	}
-
-	public void setPersonID(String author) {
-		this.mPersonID = author;
-	}
-
 	
-	public void setDate(String author) {
-		this.mDate = author;
-	}
-
-	public String getDate() {
-		return mDate;
-	}
-
 	public int getPosition() {
-		return mPosition;
+		return position;
 	}
 
-	public void setPosition(int author) {
-		this.mPosition = author;
+	public void setPosition(int position) {
+		this.position = position;
 	}
 
-	public String getWt() {
-		return mWt;
+	public String getSampleId() {
+		return sampleId;
 	}
 
-	public void setWt(String author) {
-		this.mWt = author;
+	public void setSampleId(String sample) {
+		this.sampleId = sample;
+	}
+
+	public String getPhoto() {
+		return photo;
+	}
+
+	public void setPhoto(String photo) {
+		this.photo = photo;
+	}
+
+	public String getPersonId() {
+		return personId;
+	}
+
+	public void setPersonId(String person) {
+		this.personId = person;
+	}
+
+	public void setTimestamp(String timestamp) {
+		this.timestamp = timestamp;
+	}
+
+	public String getTimestamp() {
+		return timestamp;
+	}
+	
+	public String getWeight() {
+		return weight;
+	}
+
+	public void setWeight(String weight) {
+		this.weight = weight;
 	}
 
 	@Override
 	public String toString() {
-		return mBoxID + "," + mEnvID + "," + mPersonID + "," + mDate + "," + mPosition + "," + mWt;
+		return sampleId + "," + photo + "," + personId + "," + timestamp + "," + weight;
 	}
 }
