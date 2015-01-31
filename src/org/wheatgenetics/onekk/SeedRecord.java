@@ -4,10 +4,9 @@ public class SeedRecord {
 	
 	private int id;
 	private String sampleId;
-	private String length;
-	private String width;
-	private String diameter;
-	private String circularity;
+	private double length;
+	private double width;
+	private double circularity;
 	private String color;
 	private String area;
 	private String weight;
@@ -15,12 +14,11 @@ public class SeedRecord {
 	public SeedRecord() {
 	}
 
-	public SeedRecord(String sampleId, String length, String width, String diameter, String circularity, String color, String area, String weight) {
+	public SeedRecord(String sampleId, double length, double width, double circularity, String color, String area, String weight) {
 		super();
 		this.sampleId = sampleId;
 		this.length = length;
 		this.width = width;
-		this.diameter = diameter;
 		this.circularity = circularity;
 		this.color = color;
 		this.area = area;
@@ -39,39 +37,31 @@ public class SeedRecord {
 		return sampleId;
 	}
 
-	public void setSampleId(int id) {
+	public void setSampleId(String sampleId) {
 		this.sampleId = sampleId;
 	}
 
-	public String getLength() {
+	public double getLength() {
 		return length;
 	}
 
-	public void setLength(String length) {
+	public void setLength(double length) {
 		this.length = length;
 	}
 
-	public String getWidth() {
+	public double getWidth() {
 		return width;
 	}
 
-	public void setWidth(String width) {
+	public void setWidth(double width) {
 		this.width = width;
 	}
 
-	public String getDiameter() {
-		return diameter;
-	}
-
-	public void setDiameter(String diameter) {
-		this.diameter = diameter;
-	}
-
-	public void setCircularity(String circularity) {
+	public void setCircularity(double circularity) {
 		this.circularity = circularity;
 	}
 
-	public String getCircularity() {
+	public double getCircularity() {
 		return circularity;
 	}
 
@@ -101,6 +91,6 @@ public class SeedRecord {
 
 	@Override
 	public String toString() {
-		return sampleId + "," + length + "," + width + "," + diameter + "," + circularity + "," + color  + "," + area  + "," + weight;
+		return sampleId + "," + length + "," + width + "," + circularity + "," + color  + "," + area  + "," + weight;
 	}
 }

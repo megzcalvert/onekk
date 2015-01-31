@@ -12,6 +12,11 @@
         android:showAsAction="always"
         android:title="Test"/>
     <item
+        android:id="@+id/settings"
+        android:icon="@drawable/ic_action_about"
+        android:showAsAction="never"
+        android:title="Settings"/>
+    <item
         android:id="@+id/export"
         android:icon="@drawable/ic_action_save"
         android:showAsAction="always|withText"

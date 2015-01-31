@@ -3,23 +3,32 @@ package org.wheatgenetics.onekk;
 public class SampleRecord {
 
 	private int id;
-	private int position;
 	private String sampleId;
 	private String photo;
 	private String personId;
-	private String timestamp;
+	private String date;
+	private String seedCount;
 	private String weight;
-	
+	private Double avgArea;
+	private Double avgLength;
+	private Double avgWidth;
+
 	public SampleRecord() {
 	}
-	
-	public SampleRecord(String sampleId, int position, String photo, String personId, String timestamp, String weight) {
+
+	public SampleRecord(String sampleId, String photo,
+			String personId, String date, String seedCount, String weight, Double avgArea,
+			Double avgLength, Double avgWidth) {
 		super();
 		this.sampleId = sampleId;
 		this.photo = photo;
 		this.personId = personId;
-		this.timestamp = timestamp;
+		this.date = date;
+		this.seedCount = seedCount;
 		this.weight = weight;
+		this.avgArea = avgArea;
+		this.avgLength = avgLength;
+		this.avgWidth = avgWidth;
 	}
 
 	public int getId() {
@@ -28,14 +37,6 @@ public class SampleRecord {
 
 	public void setId(int id) {
 		this.id = id;
-	}
-	
-	public int getPosition() {
-		return position;
-	}
-
-	public void setPosition(int position) {
-		this.position = position;
 	}
 
 	public String getSampleId() {
@@ -62,14 +63,22 @@ public class SampleRecord {
 		this.personId = person;
 	}
 
-	public void setTimestamp(String timestamp) {
-		this.timestamp = timestamp;
+	public void setDate(String date) {
+		this.date = date;
 	}
 
-	public String getTimestamp() {
-		return timestamp;
+	public String getDate() {
+		return date;
 	}
 	
+	public String getSeedCount() {
+		return seedCount;
+	}
+
+	public void setSeedCount(String seedCount) {
+		this.seedCount = seedCount;
+	}
+
 	public String getWeight() {
 		return weight;
 	}
@@ -78,8 +87,37 @@ public class SampleRecord {
 		this.weight = weight;
 	}
 
+	public Double getAvgArea() {
+		// TODO Auto-generated method stub
+		return avgArea;
+	}
+
+	public Double getAvgLength() {
+		// TODO Auto-generated method stub
+		return avgLength;
+	}
+
+	public Double getAvgWidth() {
+		// TODO Auto-generated method stub
+		return avgWidth;
+	}
+
+	public void setAvgArea(Double avgArea) {
+		this.avgArea = avgArea;
+	}
+
+	public void setAvgLength(Double avgLength) {
+		this.avgLength = avgLength;
+	}
+
+	public void setAvgWidth(Double avgWidth) {
+		this.avgWidth = avgWidth;
+	}
+
 	@Override
 	public String toString() {
-		return sampleId + "," + photo + "," + personId + "," + timestamp + "," + weight;
+		return sampleId + "," + photo + "," + personId + "," + date + "," + seedCount + "," 
+				+ weight + "," + avgArea + "," + avgLength + "," + avgWidth;
 	}
+
 }

@@ -3,9 +3,12 @@ package org.wheatgenetics.onekk;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,13 +25,19 @@ import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 import org.wheatgenetics.imageprocess.ImgProcess1KK;
+import org.wheatgenetics.imageprocess.ImgProcess1KK.Seed;
+import org.wheatgenetics.onekk.CSVWriter;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.res.Configuration;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -58,10 +67,15 @@ import android.view.View.OnLongClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -78,17 +92,18 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	private String personID;
 	String photoName;
+	String cropNameStr = "";
 	
 	private EditText mWeightEditText;
 	private EditText inputText;
 
-	private TextView boxNumTextView;
-
+	ArrayList<Seed> seeds;
+	
 	TextView sampleName;
 	TextView numSeeds;
 	TextView avgLength;
 	TextView avgWidth;
-	TextView avgArea;
+	TextView sampleWeight;
 
 	TextView boxNumTV;
 	TextView envIDTV;
@@ -97,11 +112,13 @@ public class MainActivity extends Activity implements OnInitListener {
 	TextView itemHeader;
 	TextView idHeader;
 
+	private SharedPreferences ep;
+	
 	TableLayout OneKKTable;
 	MySQLiteHelper db;
 	String firstName = "";
 	String lastName = "";
-	List<InventoryRecord> list;
+	List<SampleRecord> list;
 	int itemCount;
 	ScrollView sv1;
 	static int currentItemNum = 1;
@@ -117,6 +134,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		Log.v(TAG, "onCreate");
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		ep = getSharedPreferences("Settings", 0);
 		
 		inputText = (EditText) findViewById(R.id.etInput);
 
@@ -147,7 +165,6 @@ public class MainActivity extends Activity implements OnInitListener {
 						return true;
 					picName = inputText.getText().toString();
 					takePic();
-					addRecord(); // Add the current record to the table
 					goToBottom();
 					inputText.requestFocus(); // Set focus back to Enter box
 				}
@@ -159,7 +176,6 @@ public class MainActivity extends Activity implements OnInitListener {
 					if (event.getAction() == KeyEvent.ACTION_UP) {
 						picName = inputText.getText().toString();
 						takePic();
-						addRecord(); // Add the current record to the table
 						goToBottom();
 					}
 					inputText.requestFocus(); // Set focus back to Enter box
@@ -177,7 +193,6 @@ public class MainActivity extends Activity implements OnInitListener {
 					if (event.getAction() != KeyEvent.ACTION_DOWN)
 						return true;
 
-					addRecord(); // Add the current record to the table
 					goToBottom();
 
 					if (mDevice != null) {
@@ -191,7 +206,6 @@ public class MainActivity extends Activity implements OnInitListener {
 						return true;
 					}
 					if (event.getAction() == KeyEvent.ACTION_UP) {
-						addRecord(); // Add the current record to the table
 						goToBottom();
 					}
 					inputText.requestFocus(); // Set focus back to Enter box
@@ -204,9 +218,16 @@ public class MainActivity extends Activity implements OnInitListener {
 		// TODO don't forget to undo this
 		// setPersonDialog();
 		// findScale();
-		createDirectory();
-		// parseDbToTable();
+		createDirectory("OneKK");
+		createDirectory("OneKK/Photos");
+		createDirectory("OneKK/Export");
+		createDirectory("OneKK/AnalyzedPhotos");
+		parseDbToTable();
 		goToBottom();
+		
+		if(ep.getString("cropName","").equals("")) {
+			settingsDialog();
+		}
 		
 		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
 	}
@@ -229,6 +250,7 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	private void startCamera() {
 		mCamera = getCameraInstance();
+		mCamera.setDisplayOrientation(270);
 		// Create our Preview view and set it as the content of our activity.
 		mPreview = new CameraPreview(this, mCamera);
 		FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
@@ -245,18 +267,25 @@ public class MainActivity extends Activity implements OnInitListener {
 		});
 	}
 
+	
+	//TODO
 	private void parseDbToTable() {
 		OneKKTable.removeAllViews();
-		list = db.getAllBooks();
+		list = db.getAllSamples();
 		itemCount = list.size();
 		if (itemCount != 0) {
 			for (int i = 0; i < itemCount; i++) {
 				String[] temp = list.get(i).toString().split(",");
-				Log.e(TAG, temp[0] + " " + Integer.parseInt(temp[4]) + " "
-						+ temp[1] + " " + temp[5]);
-				createNewTableEntry(temp[0], Integer.parseInt(temp[4]),
-						temp[1], temp[5]);
-				currentItemNum = Integer.parseInt(temp[4]) + 1;
+
+				Log.d(TAG, temp[0] + " " + temp[1] + " " + temp[2] + " "
+						+ temp[3] + " " + temp[4] + " " + temp[5] + " "
+						+ temp[6] + " " + temp[7]);
+
+				createNewTableEntry(temp[0], temp[5],
+						String.format("%.2f", Double.parseDouble(temp[6])),
+						String.format("%.2f", Double.parseDouble(temp[7])),
+						String.format("%.2f", Double.parseDouble(temp[8])));
+
 			}
 		}
 	}
@@ -265,6 +294,8 @@ public class MainActivity extends Activity implements OnInitListener {
 	 * Adds a new record to the internal list of records
 	 */
 	private void addRecord() {
+		
+		// Data manipulation
 		String ut;
 		String date = getDate();
 
@@ -280,12 +311,32 @@ public class MainActivity extends Activity implements OnInitListener {
 		} else {
 			weight = mWeightEditText.getText().toString();
 		}
+		
+		// Add all measured seeds to database
+		for(int j = 0; j < seeds.size(); j++){
+		    db.addSeedRecord(new SeedRecord(inputText.getText().toString(),seeds.get(j).getLength(),seeds.get(j).getWidth(),seeds.get(j).getCirc(),"","",""));
+	    }
+		
+		// Calculate averages
+		double avgLength = 0.0;
+		double avgWidth = 0.0;
+		double avgArea = 0.0;
+		
+		avgLength = db.averageSample(inputText.getText().toString(), "length");
+		avgWidth = db.averageSample(inputText.getText().toString(), "width");
+		avgArea = db.averageSample(inputText.getText().toString(), "area");
+		
+		// TODO Count seeds
+		String seedCount = "0";
+		
+		// Add sample to database
+		db.addSampleRecord(new SampleRecord(inputText.getText().toString(), photoName, personID, date, seedCount, weight, avgArea, avgLength, avgWidth));
+		
+		// Round values for UI
+		String avgLengthStr = String.format("%.2f", avgLength);
+		String avgWidthStr = String.format("%.2f", avgWidth);
 
-		db.addSampleRecord(new SampleRecord(inputText.getText().toString(),
-				currentItemNum, null, personID, date, weight));
-
-		createNewTableEntry("5", currentItemNum,
-				inputText.getText().toString(), weight);
+		createNewTableEntry(inputText.getText().toString(),"0", avgLengthStr,avgWidthStr,weight);
 		currentItemNum++;
 	}
 
@@ -313,9 +364,10 @@ public class MainActivity extends Activity implements OnInitListener {
 	/**
 	 * Adds a new entry to the end of the TableView
 	 */
-	private void createNewTableEntry(String bn, int in, String en, String wt) {
+	private void createNewTableEntry(String sample, String seedCount, String avgL, String avgW, String wt) {
 		inputText.setText("");
-
+		String tag = sample;
+		
 		/* Create a new row to be added. */
 		TableRow tr = new TableRow(this);
 		tr.setLayoutParams(new TableLayout.LayoutParams(
@@ -326,7 +378,8 @@ public class MainActivity extends Activity implements OnInitListener {
 		sampleName.setGravity(Gravity.CENTER | Gravity.BOTTOM);
 		sampleName.setTextColor(Color.BLACK);
 		sampleName.setTextSize(20.0f);
-		sampleName.setText(en);
+		sampleName.setText(sample);
+		sampleName.setTag(sample);
 		sampleName.setLayoutParams(new TableRow.LayoutParams(0,
 				LayoutParams.WRAP_CONTENT, 0.4f));
 
@@ -335,7 +388,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		numSeeds.setGravity(Gravity.CENTER | Gravity.BOTTOM);
 		numSeeds.setTextColor(Color.BLACK);
 		numSeeds.setTextSize(20.0f);
-		numSeeds.setText(bn);
+		numSeeds.setText("5");
 		numSeeds.setLayoutParams(new TableRow.LayoutParams(0,
 				LayoutParams.WRAP_CONTENT, 0.12f));
 
@@ -344,7 +397,7 @@ public class MainActivity extends Activity implements OnInitListener {
 		avgLength.setGravity(Gravity.CENTER | Gravity.BOTTOM);
 		avgLength.setTextColor(Color.BLACK);
 		avgLength.setTextSize(20.0f);
-		avgLength.setText(bn);
+		avgLength.setText(avgL);
 		avgLength.setLayoutParams(new TableRow.LayoutParams(0,
 				LayoutParams.WRAP_CONTENT, 0.12f));
 
@@ -353,17 +406,17 @@ public class MainActivity extends Activity implements OnInitListener {
 		avgWidth.setGravity(Gravity.CENTER | Gravity.BOTTOM);
 		avgWidth.setTextColor(Color.BLACK);
 		avgWidth.setTextSize(20.0f);
-		avgWidth.setText(bn);
+		avgWidth.setText(avgW);
 		avgWidth.setLayoutParams(new TableRow.LayoutParams(0,
 				LayoutParams.WRAP_CONTENT, 0.12f));
 
 		/* Create the area field */
-		avgArea = new TextView(this);
-		avgArea.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-		avgArea.setTextColor(Color.BLACK);
-		avgArea.setTextSize(20.0f);
-		avgArea.setText(bn);
-		avgArea.setLayoutParams(new TableRow.LayoutParams(0,
+		sampleWeight = new TextView(this);
+		sampleWeight.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+		sampleWeight.setTextColor(Color.BLACK);
+		sampleWeight.setTextSize(20.0f);
+		sampleWeight.setText(wt);
+		sampleWeight.setLayoutParams(new TableRow.LayoutParams(0,
 				LayoutParams.WRAP_CONTENT, 0.12f));
 
 		/* Define the listener for the longclick event */
@@ -380,27 +433,23 @@ public class MainActivity extends Activity implements OnInitListener {
 		tr.addView(numSeeds);
 		tr.addView(avgLength);
 		tr.addView(avgWidth);
-		tr.addView(avgArea);
+		tr.addView(sampleWeight);
 		OneKKTable.addView(tr, 0, new LayoutParams( // Adds row to top of table
 				TableLayout.LayoutParams.MATCH_PARENT,
 				TableLayout.LayoutParams.MATCH_PARENT));
 	}
 
 	private void deleteDialog(String tag) {
-		final String tagArray[] = tag.split(",");
-		final String fEnv = tagArray[1];
-		final int fNum = Integer.parseInt(tagArray[2]);
+		final String sampleName = tag;
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 		builder.setTitle("Delete Entry");
-		builder.setMessage("Delete " + fEnv + "?")
+		builder.setMessage("This will delete all samples and seeds associated with \"" + sampleName + "\". Do you wish to proceed?")
 				.setCancelable(true)
 				.setPositiveButton("Yes",
 						new DialogInterface.OnClickListener() {
 							public void onClick(DialogInterface dialog, int id) {
-								SampleRecord temp = new SampleRecord(fEnv,
-										fNum, null, null, null, null);
-								db.deleteSample(temp);
+								db.deleteSample(sampleName);
 								parseDbToTable();
 							}
 						})
@@ -414,14 +463,13 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	}
 
-	private void createDirectory() {
+	private void createDirectory(String file) {
 		try {
-			File myFile = new File("/sdcard/OneKK/");
+			File myFile = new File(Environment.getExternalStorageDirectory().getPath() + "/" + file + "/");
 			if (!myFile.exists()) {
 				if (!myFile.mkdirs()) {
-					Toast.makeText(getBaseContext(),
-							"Problem making directory", Toast.LENGTH_SHORT)
-							.show();
+					makeToast("Problem making directories");
+					makeFileDiscoverable(myFile, MainActivity.this);
 				}
 			}
 		} catch (Exception e) {
@@ -462,7 +510,7 @@ public class MainActivity extends Activity implements OnInitListener {
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.scale_menu, menu);
+		getMenuInflater().inflate(R.menu.action_menu, menu);
 		return true;
 	}
 
@@ -481,8 +529,11 @@ public class MainActivity extends Activity implements OnInitListener {
 		case R.id.person:
 			setPersonDialog();
 			break;
+		case R.id.settings:
+			settingsDialog();
+			break;
 		case R.id.export:
-			exportCSV();
+			exportDialog();
 			break;
 		case R.id.clearData:
 			clearDialog();
@@ -498,6 +549,124 @@ public class MainActivity extends Activity implements OnInitListener {
 		Log.i(TAG, String.format("item selected %s", item.getTitle()));
 		return true;
 	}
+
+	private void settingsDialog() {
+		final AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		LayoutInflater inflater = this.getLayoutInflater();
+		final View settingsView = inflater.inflate(R.layout.settings, null);
+		
+		final Editor ed = ep.edit();
+		
+		final Spinner cropName = (Spinner) settingsView.findViewById(R.id.spCrops);
+		final Switch analysisPreview = (Switch) settingsView.findViewById(R.id.swAnalysisPreview);
+		final EditText refDiam = (EditText) settingsView.findViewById(R.id.etReferenceDiameter);
+		final EditText expectLWR = (EditText) settingsView.findViewById(R.id.etExpectedLWR);
+		final EditText minCirc = (EditText) settingsView.findViewById(R.id.etMinCirc);
+		final EditText minSize = (EditText) settingsView.findViewById(R.id.etMinSize);
+		
+		refDiam.setText(ep.getString("refDiam", "1"));
+		analysisPreview.setChecked(ep.getBoolean("analysisPreview", false));
+
+		cropName.setSelection(getIndex(cropName, ep.getString("cropName","Wheat")));
+		expectLWR.setText(ep.getString("expectLWR", ""));
+		minCirc.setText(ep.getString("minCirc", ""));
+		minSize.setText(ep.getString("minSize", ""));
+		
+		cropName.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> arg0, View arg1,
+					int arg2, long arg3) {
+				switch(arg2) {
+				case 0: // Wheat
+					expectLWR.setText("1.2");
+					minCirc.setText("0.6");
+					minSize.setText("30");
+					break;
+				case 1: // Maize
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 2: // Rice
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 3: // Sorghum
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 4: // Soybeans
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 5: // Canola
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 6:	// Canola
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 7: // Potato
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 8: // Cassava
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				case 9: // Custom
+					expectLWR.setText("");
+					minCirc.setText("");
+					minSize.setText("");
+					break;
+				}
+				
+				cropNameStr = cropName.getItemAtPosition(arg2).toString();
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> arg0) {
+
+			}
+		});
+		
+		alert.setCancelable(false);
+		alert.setTitle("Settings");
+		alert.setView(settingsView);
+		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {		
+				ed.putString("refDiam", refDiam.getText().toString());
+				ed.putString("cropName", cropNameStr);
+				ed.putString("expectLWR", expectLWR.getText().toString());
+				ed.putString("minCirc", minCirc.getText().toString());
+				ed.putString("minSize", minSize.getText().toString());
+				ed.putBoolean("analysisPreview", analysisPreview.isChecked());
+				ed.commit();
+			}
+		});
+		alert.show();		
+	}
+	
+	private int getIndex(Spinner spinner, String myString)
+	 {
+	  int index = 0;
+
+	  for (int i=0;i<spinner.getCount();i++){
+	   if (spinner.getItemAtPosition(i).toString().equalsIgnoreCase(myString)){
+	    index = i;
+	    i=spinner.getCount();//will stop the loop, kind of break, by making condition false
+	   }
+	  }
+	  return index;
+	 } 
 
 	private void takePic() {
 		inputText.setEnabled(false);
@@ -522,6 +691,7 @@ public class MainActivity extends Activity implements OnInitListener {
 			}
 
 			Uri outputFileUri = Uri.fromFile(pictureFile);
+			makeFileDiscoverable(pictureFile,MainActivity.this);
 			imageAnalysis(outputFileUri);
 			
 			mCamera.startPreview();
@@ -537,11 +707,8 @@ public class MainActivity extends Activity implements OnInitListener {
 	private File getOutputMediaFile(int type) {
 
 		File mediaStorageDir = new File(
-				Environment.getExternalStorageDirectory(), "OneKK");
-		// This location works best if you want the created images to be shared
-		// between applications and persist after your app has been uninstalled.
+				Environment.getExternalStorageDirectory(), "OneKK/Photos");
 
-		// Create the storage directory if it does not exist
 		if (!mediaStorageDir.exists()) {
 			if (!mediaStorageDir.mkdirs()) {
 				Log.d("OneKK", "failed to create directory");
@@ -558,6 +725,8 @@ public class MainActivity extends Activity implements OnInitListener {
 		
 		if (picName.length() > 0) {
 			fileName = picName + "_";
+		} else {
+			fileName = "temp_";
 		}
 
 		mediaFile = new File(mediaStorageDir.getPath() + File.separator
@@ -570,10 +739,15 @@ public class MainActivity extends Activity implements OnInitListener {
 	private void imageAnalysis(Uri photo) {
 		photoName = photo.getLastPathSegment().toString();
 		
-	    ImgProcess1KK imgP = new ImgProcess1KK(Environment.getExternalStorageDirectory().toString()+ "/OneKK/" + photoName, 1);
-	    imgP.writeProcessedImg(Environment.getExternalStorageDirectory().toString() + "/OneKK/" + photoName + "_new.jpg");
+	    ImgProcess1KK imgP = new ImgProcess1KK(Environment.getExternalStorageDirectory().toString()+ "/OneKK/Photos/" + photoName, 1, this);
+	    imgP.writeProcessedImg(Environment.getExternalStorageDirectory().toString() + "/OneKK/AnalyzedPhotos/" + photoName + "_new.jpg");
 	    
-	    postImageDialog(photoName);
+	    seeds = imgP.getList();
+	    addRecord(); // Add the current record to the table
+	    
+	    if(ep.getBoolean("analysisPreview", false) == true) {
+	    	postImageDialog(photoName);
+	    };
 	}
 	
 	private void postImageDialog(String imageName) {
@@ -582,10 +756,10 @@ public class MainActivity extends Activity implements OnInitListener {
 		LayoutInflater inflater = this.getLayoutInflater();
 		final View personView = inflater.inflate(R.layout.post_image, null);
 		
-		File imgFile = new File(Environment.getExternalStorageDirectory().toString() + "/OneKK/" + imageName + "_new.jpg");
+		File imgFile = new File(Environment.getExternalStorageDirectory().toString() + "/OneKK/AnalyzedPhotos/" + imageName + "_new.jpg");
 		
 		if(imgFile.exists()) {
-			ImageView imgView = (ImageView) personView.findViewById(R.id.postImage);
+			TouchImageView imgView = (TouchImageView) personView.findViewById(R.id.postImage);
 			Bitmap bmImg = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
 			
 			Matrix matrix = new Matrix();
@@ -685,7 +859,6 @@ public class MainActivity extends Activity implements OnInitListener {
 				.setPositiveButton("Yes",
 						new DialogInterface.OnClickListener() {
 							public void onClick(DialogInterface dialog, int id) {
-								boxNumTextView.setText("");
 								makeToast("Data deleted");
 								dropTables();
 							}
@@ -699,85 +872,42 @@ public class MainActivity extends Activity implements OnInitListener {
 		alert.show();
 	}
 
-	private void exportCSV() {
-		Calendar c = Calendar.getInstance();
-		int year = c.get(Calendar.YEAR);
-		int month = c.get(Calendar.MONTH) + 1; // Months are numbered 0-11
-		int day = c.get(Calendar.DAY_OF_MONTH);
-		String date = year + "-" + month + "-" + day;
+	private void exportDialog() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+		builder.setMessage("Export raw data or sample summaries?")
+				.setCancelable(false)
 
-		if (year == 0) { // database is empty
-			makeToast("Database currently empty.");
-			return;
-		}
-
-		try {
-			File myFile;
-			myFile = new File("sdcard/OneKK/onekk_" + date + ".CSV");
-			if (myFile.exists()) {
-				for (int i = 0; i < 100; i++) // If the file already exists,
-												// rename it
-				{ // with a "_#" suffix
-					date = Integer.toString(year) + "."
-							+ Integer.toString(month) + "."
-							+ Integer.toString(day);
-					date += "_" + Integer.toString(i);
-					myFile = new File("sdcard/OneKK/onekk_" + date + ".CSV");
-					if (!myFile.exists()) {
-						break;
-					}
-				}
-				writeCSV("onekk_" + date + ".CSV");
-			} else {
-				writeCSV("onekk_" + date + ".CSV");
-			}
-		} catch (Exception e) {
-			Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT)
-					.show();
-		}
-
-		dropTables();
-	}
-
-	private void writeCSV(String filename) {
-		String record;
-		File myFile = null;
-		list = db.getAllBooks();
-		itemCount = list.size();
-		if (itemCount != 0) {
-			try {
-				myFile = new File("sdcard/OneKK/" + filename);
-				myFile.createNewFile();
-				FileOutputStream fOut = new FileOutputStream(myFile);
-				OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
-
-				record = "box_id,seed_id,inventory_date,inventory_person,weight_gram\r\n";
-				myOutWriter.append(record);
-
-				for (int i = 0; i < itemCount; i++) {
-
-					String[] temp = list.get(i).toString().split(",");
-					record = temp[0] + ","; // box
-					record += temp[1] + ","; // seed id
-					record += temp[3] + ","; // date
-					record += temp[2] + ","; // person
-					record += temp[5] + "\r\n"; // weight
-
-					myOutWriter.append(record);
-				}
-				myOutWriter.close();
-				fOut.close();
-				makeFileDiscoverable(myFile, this);
-				makeToast("File exported successfully.");
-			} catch (Exception e) {
-				Toast.makeText(getBaseContext(), e.getMessage(),
-						Toast.LENGTH_SHORT).show();
-			}
-
-		}
-		db.close();
-		shareFile(filename);
-		dropTables();
+				.setPositiveButton("Raw data",
+						new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog, int id) {
+								Cursor exportCursor = db.exportRawData();
+								try {
+									exportDatabase(exportCursor, "RawData");
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
+						})
+				.setNegativeButton("Sample summaries",
+						new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog, int id) {
+								Cursor exportCursor = db.exportSummaryData();
+								try {
+									exportDatabase(exportCursor, "SummaryData");
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
+						})
+				.setTitle("Export data")
+				.setNeutralButton("Cancel",
+						new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog, int id) {
+								dialog.dismiss();
+							}
+						});
+		AlertDialog alert = builder.create();
+		alert.show();
 	}
 
 	@Override
@@ -798,9 +928,72 @@ public class MainActivity extends Activity implements OnInitListener {
 		OneKKTable.removeAllViews();
 		currentItemNum = 1;
 	}
+	
+	public void exportDatabase(Cursor cursorForExport,String type) throws Exception {
+
+		File file = null;
+		
+		Calendar c = Calendar.getInstance();
+		int year = c.get(Calendar.YEAR);
+		int month = c.get(Calendar.MONTH) + 1; // Months are numbered 0-11
+		int day = c.get(Calendar.DAY_OF_MONTH);
+		String date = year + "-" + month + "-" + day;
+
+		if (year == 0) { // database is empty
+			makeToast("Database currently empty.");
+			return;
+		}
+		
+		try {
+			file = new File(Environment.getExternalStorageDirectory() + "/OneKK/Export/export_" + type + "_" + date + "_1.csv");
+			if (file.exists()) {
+				// Add number suffix if file exists
+				for (int i = 2; i < 100; i++) 
+				{
+					String newDate = date;
+					newDate += "_" + Integer.toString(i);
+					file = new File(Environment.getExternalStorageDirectory() + "/OneKK/Export/export_" + type + "_" + newDate + ".csv");
+					if (!file.exists()) {
+						break;
+					}
+				}
+			} else {
+				
+			}
+		} catch (Exception e) {
+			Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT)
+					.show();
+		}
+
+		Cursor curCSV = cursorForExport;
+		File exportDir = new File(Environment.getExternalStorageDirectory() + "/OneKK/Export/", "");
+
+		try {
+			file.createNewFile();
+			CSVWriter csvWrite = new CSVWriter(new FileWriter(file));
+			csvWrite.writeNext(curCSV.getColumnNames());
+			
+			while (curCSV.moveToNext()) {
+				String arrStr[]	= new String[curCSV.getColumnCount()];
+						
+				for(int k=0; k< curCSV.getColumnCount(); k++) {
+					arrStr[k] = curCSV.getString(k);
+				}
+
+				csvWrite.writeNext(arrStr);
+			}
+			csvWrite.close();
+			curCSV.close();
+		} catch (Exception sqlEx) {
+			Log.e("MainActivity", sqlEx.getMessage(), sqlEx);
+		}
+		
+		makeFileDiscoverable(file, MainActivity.this);
+		shareFile(file.toString());
+	}
+       
 
 	private void shareFile(String filePath) {
-		filePath = "sdcard/OneKK/" + filePath;
 		Intent intent = new Intent();
 		intent.setAction(android.content.Intent.ACTION_SEND);
 		intent.setType("text/plain");

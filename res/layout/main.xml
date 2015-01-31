@@ -11,64 +11,67 @@
         android:layout_marginLeft="50sp"
         android:layout_marginRight="50sp"
         android:layout_marginTop="10sp"
-        android:orientation="vertical" >
-
-        <ImageView
-            android:id="@+id/imgCamera"
-            android:layout_width="wrap_content"
-            android:layout_height="270sp"
-            android:src="@drawable/camera"
-            android:visibility="gone" />
+        android:orientation="horizontal"
+        android:layout_gravity="center_vertical" >
 
         <FrameLayout
             android:id="@+id/camera_preview"
-            android:layout_width="fill_parent"
-            android:layout_height="270sp" />
-    </LinearLayout>
+            android:layout_width="195sp"
+            android:layout_height="260sp" />
 
-    <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_marginBottom="10sp"
-        android:layout_marginLeft="30sp"
-        android:layout_marginRight="30sp"
-        android:orientation="horizontal" >
-
-        <TextView
-            android:id="@+id/tvInput"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Input:"
-            android:textSize="20sp" />
+            android:orientation="vertical" >
 
-        <EditText
-            android:id="@+id/etInput"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="textFilter"
-            android:lines="1"
-            android:singleLine="true" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:orientation="horizontal" >
 
-        <TextView
-            android:id="@+id/tvWeightLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="15sp"
-            android:text="Weight:"
-            android:textSize="20sp" />
+                <TextView
+                    android:id="@+id/tvInput"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Input:"
+                    android:textSize="20sp" />
 
-        <EditText
-            android:id="@+id/text_weight"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:lines="1"
-            android:minEms="5"
-            android:selectAllOnFocus="true"
-            android:singleLine="true"
-            android:text="0.0"
-            android:textSize="20sp" />
+                <EditText
+                    android:id="@+id/etInput"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:inputType="textFilter"
+                    android:lines="1"
+                    android:singleLine="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:orientation="horizontal" >
+
+                <TextView
+                    android:id="@+id/tvWeightLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Weight:"
+                    android:textSize="20sp" />
+
+                <EditText
+                    android:id="@+id/text_weight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:lines="1"
+                    android:minEms="5"
+                    android:selectAllOnFocus="true"
+                    android:singleLine="true"
+                    android:text="0.0"
+                    android:textSize="20sp" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -113,8 +116,7 @@
                     android:text="Len."
                     android:textSize="20dp"
                     android:textStyle="bold" />
-                
-                
+
                 <TextView
                     android:id="@+id/tvAvgWid"
                     android:layout_width="0dp"
@@ -124,17 +126,16 @@
                     android:text="Wid."
                     android:textSize="20dp"
                     android:textStyle="bold" />
-                
+
                 <TextView
-                    android:id="@+id/tvAvgArea"
+                    android:id="@+id/tvWeight"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight=".12"
                     android:gravity="center"
-                    android:text="Area"
+                    android:text="Wt."
                     android:textSize="20dp"
                     android:textStyle="bold" />
-                
             </TableRow>
 
             <ScrollView

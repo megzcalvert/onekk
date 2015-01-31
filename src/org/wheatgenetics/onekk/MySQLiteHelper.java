@@ -21,8 +21,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
-		db.execSQL("CREATE TABLE sample (id INTEGER PRIMARY KEY AUTOINCREMENT, sample_id TEXT, photo TEXT, person TEXT, timestamp TEXT, weight TEXT)");
-		db.execSQL("CREATE TABLE seed (id INTEGER PRIMARY KEY AUTOINCREMENT, sample_id TEXT, length TEXT, width TEXT, diameter TEXT, circularity TEXT, area TEXT, color TEXT )");
+		db.execSQL("CREATE TABLE sample (id INTEGER PRIMARY KEY AUTOINCREMENT, sample_id TEXT, photo TEXT, person TEXT, date TEXT, seed_count TEXT, weight TEXT, avg_length TEXT, avg_width TEXT, avg_area TEXT)");
+		db.execSQL("CREATE TABLE seed (id INTEGER PRIMARY KEY AUTOINCREMENT, sample_id TEXT, length TEXT, width TEXT, circularity TEXT, area TEXT, color TEXT, weight TEXT )");
 	}
 
 	@Override
@@ -42,36 +42,25 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 	// Sample table columns names
 	private static final String SAMPLE_ID = "id";
 	private static final String SAMPLE_SID = "sample_id";
+	private static final String SAMPLE_POSITION = "position";
 	private static final String SAMPLE_PHOTO = "photo";
 	private static final String SAMPLE_PERSON = "person";
-	private static final String SAMPLE_TIME = "timestamp";
+	private static final String SAMPLE_TIME = "date";
+	private static final String SAMPLE_NUMSEEDS = "seed_count";
 	private static final String SAMPLE_WT = "weight";
+	private static final String SAMPLE_AVGLENGTH = "avg_length";
+	private static final String SAMPLE_AVGWIDTH = "avg_width";
+	private static final String SAMPLE_AVGAREA = "avg_area";
 
 	// Sample table columns names
 	private static final String SEED_ID = "id";
 	private static final String SEED_SID = "sample_id";
 	private static final String SEED_LEN = "length";
 	private static final String SEED_WID = "width";
-	private static final String SEED_DIAM = "diameter";
 	private static final String SEED_CIRC = "circularity";
 	private static final String SEED_AREA = "area";
 	private static final String SEED_COL = "color";
 	private static final String SEED_WT = "weight";
-
-	// Sample table columns names
-	private static final String KEY_ID = "id";
-	private static final String KEY_BOX = "box";
-	private static final String KEY_ENVID = "envid";
-	private static final String KEY_PERSON = "person";
-	private static final String KEY_DATE = "date";
-	private static final String KEY_POSITION = "position";
-	private static final String KEY_WT = "wt";
-
-	private static final String[] SAMPLE_COLUMNS = { SAMPLE_ID, SAMPLE_SID,
-			SAMPLE_PHOTO, SAMPLE_PERSON, SAMPLE_WT, SAMPLE_TIME };
-
-	private static final String[] SEED_COLUMNS = { SEED_ID, SEED_SID, SEED_LEN,
-			SEED_WID, SEED_DIAM, SEED_CIRC, SEED_AREA, SEED_COL };
 
 	public void addSampleRecord(SampleRecord sample) {
 		Log.d("Add Sample: ", sample.toString());
@@ -81,21 +70,23 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
 		// 2. create ContentValues to add key "column"/value
 		ContentValues values = new ContentValues();
-		
-		values.put(SAMPLE_ID, sample.getId());
 		values.put(SAMPLE_SID, sample.getSampleId());
 		values.put(SAMPLE_PHOTO, sample.getPhoto());
 		values.put(SAMPLE_PERSON, sample.getPersonId());
-		values.put(SAMPLE_TIME, sample.getTimestamp());
+		values.put(SAMPLE_TIME, sample.getDate());
+		values.put(SAMPLE_NUMSEEDS, sample.getSeedCount());
 		values.put(SAMPLE_WT, sample.getWeight());
-		
+		values.put(SAMPLE_AVGAREA, sample.getAvgArea());
+		values.put(SAMPLE_AVGLENGTH, sample.getAvgLength());
+		values.put(SAMPLE_AVGWIDTH, sample.getAvgWidth());
+
 		// 3. insert
-		db.insert(TABLE_SAMPLE,null,values);
+		db.insert(TABLE_SAMPLE, null, values);
 
 		// 4. close
 		db.close();
 	}
-	
+
 	public void addSeedRecord(SeedRecord seed) {
 		// for logging
 		Log.d("Add Seed: ", seed.toString());
@@ -105,16 +96,14 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
 		// 2. create ContentValues to add key "column"/value
 		ContentValues values = new ContentValues();
-		values.put(SEED_ID, seed.getId());
 		values.put(SEED_SID, seed.getSampleId());
 		values.put(SEED_LEN, seed.getLength());
 		values.put(SEED_WID, seed.getWidth());
-		values.put(SEED_DIAM, seed.getDiameter());
 		values.put(SEED_CIRC, seed.getCircularity());
 		values.put(SEED_AREA, seed.getArea());
 		values.put(SEED_COL, seed.getColor());
 		values.put(SEED_WT, seed.getWeight());
-		
+
 		// 3. insert
 		db.insert(TABLE_SEED, null, values);
 
@@ -122,80 +111,96 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 		db.close();
 	}
 
-	public void addBook(InventoryRecord book) {
-		// for logging
-		Log.d("addBook", book.toString());
+	// Average seeds in a sample
+	public float averageSample(String sampleName, String trait) {
 
-		// 1. get reference to writable DB
-		SQLiteDatabase db = this.getWritableDatabase();
+		SQLiteDatabase db = this.getReadableDatabase();
+		Cursor cursor = db.rawQuery("SELECT AVG(" + trait
+				+ ") FROM (SELECT seed." + trait
+				+ ", seed.sample_id FROM seed WHERE seed.sample_id = \""
+				+ sampleName + "\")", null);
 
-		// 2. create ContentValues to add key "column"/value
-		ContentValues values = new ContentValues();
-		values.put(KEY_BOX, book.getBox());
-		values.put(KEY_ENVID, book.getEnvID());
-		values.put(KEY_PERSON, book.getPersonID());
-		values.put(KEY_DATE, book.getDate());
-		values.put(KEY_POSITION, book.getPosition());
-		values.put(KEY_WT, book.getWt());
+		float traitValue = 0;
 
-		// 3. insert
-		db.insert(TABLE_SAMPLE, // table
-				null, // nullColumnHack
-				values); // key/value -> keys = column names/ values = column
-							// values
+		if (cursor != null) {
+			cursor.moveToFirst();
+			traitValue = cursor.getFloat(0);
 
-		// 4. close
-		db.close();
+		}
+		return traitValue;
 	}
 
-	//TODO query and return cursor
-	public List<InventoryRecord> getAllBooks() {
-		List<InventoryRecord> books = new LinkedList<InventoryRecord>();
+	// Export summary statistics
+	public Cursor exportSummaryData() {
+		SQLiteDatabase db = this.getReadableDatabase();
+		Cursor cursor = db
+				.rawQuery(
+						"SELECT sample_id, photo, person, date, seed_count, weight, avg_length, avg_width, avg_area FROM sample",
+						null);
+		return cursor;
+	}
 
+	// Export raw data
+	public Cursor exportRawData() {
+		SQLiteDatabase db = this.getReadableDatabase();
+		Cursor cursor = db
+				.rawQuery(
+						"SELECT seed.sample_id, photo, person, date, length, width, circularity, seed.weight, area, color, sample.weight, avg_length, avg_width, avg_area, seed_count FROM seed, sample WHERE seed.sample_id = sample.sample_id",
+						null);
+		return cursor;
+	}
+	
+	public List<SampleRecord> getAllSamples() {
+		List<SampleRecord> samples = new LinkedList<SampleRecord>();
+		
 		// 1. build the query
-		String query = "SELECT  * FROM " + TABLE_SAMPLE;
-
+		String query = "SELECT * FROM " + TABLE_SAMPLE;
+		
 		// 2. get reference to writable DB
 		SQLiteDatabase db = this.getWritableDatabase();
 		Cursor cursor = db.rawQuery(query, null);
-
-		// 3. go over each row, build book and add it to list
-		InventoryRecord book = null;
+		
+		// 3. go over each row, build sample and add it to list
+		SampleRecord sample = null;
 		if (cursor.moveToFirst()) {
 			do {
-				book = new InventoryRecord();
-				book.setId(Integer.parseInt(cursor.getString(0)));
-				book.setBox(cursor.getString(1));
-				book.setEnvID(cursor.getString(2));
-				book.setPersonID(cursor.getString(3));
-				book.setDate(cursor.getString(4));
-				book.setPosition(Integer.parseInt(cursor.getString(5)));
-				book.setWt(cursor.getString(6));
-
-				// Add book to books
-				books.add(book);
+				sample = new SampleRecord();
+				
+				sample.setSampleId(cursor.getString(1));
+				sample.setPhoto(cursor.getString(2));
+				sample.setPersonId(cursor.getString(3));
+				sample.setDate(cursor.getString(4));
+				sample.setWeight(cursor.getString(5));
+				sample.setSeedCount(cursor.getString(6));
+				sample.setAvgArea(Double.parseDouble(cursor.getString(7)));
+				sample.setAvgLength(Double.parseDouble(cursor.getString(8)));
+				sample.setAvgWidth(Double.parseDouble(cursor.getString(9)));
+				samples.add(sample);
 			} while (cursor.moveToNext());
 		}
-
-		Log.d("getAllBooks()", books.toString());
-
-		// return books
-		return books;
+		Log.d("getAllSamples()", samples.toString());
+		// return samples
+		return samples;
 	}
 
-	public Boolean deleteSample(SampleRecord sample) {
+	public void deleteSample(String sample) {
 		SQLiteDatabase db = this.getWritableDatabase();
-		
-		String num = "'" + Integer.toString(sample.getPosition()) + "'";
-		Log.d("Delete sample: ", sample.toString());
-		
-		//TODO delete from sample table and query seed table to delete
-		return db.delete(TABLE_SAMPLE, KEY_POSITION + "=" + num, null) > 0;
+		Log.d("Delete sample: ", sample);
+
+		try {
+			db.execSQL("DELETE FROM sample WHERE sample_id = \"" + sample + "\"");
+			db.execSQL("DELETE FROM seed WHERE sample_id = \"" + sample + "\"");
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			db.close();
+		}
 	}
 
 	public void deleteAll() {
 		SQLiteDatabase db = this.getWritableDatabase();
 		db.delete(TABLE_SAMPLE, null, null);
 		db.delete(TABLE_SEED, null, null);
+		db.close();
 	}
 }

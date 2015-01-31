@@ -3,12 +3,15 @@ package org.wheatgenetics.imageprocess;
 import java.util.ArrayList;
 import java.util.List;
 
-
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.utils.*;
+import org.wheatgenetics.imageprocess.ImgProcess1KK.Seed;
+
+import android.content.Context;
+import android.content.SharedPreferences;
 
 public class ImgProcess1KK {
 
@@ -18,29 +21,36 @@ public class ImgProcess1KK {
 	private Scalar filterBlue[] = {new Scalar(100,0,0), new Scalar(179,255,255)};
 	
 	private List<MatOfPoint> refContours = new ArrayList<MatOfPoint>();
-	private double refDiam = 1; 
+	private double refDiam; 
 	
 	private double pixelSize = 0; // pixel size in mm
+
+	private SharedPreferences ep;
 	
-	private double expLWR = 1.2; // expected seed length to width ratio
-	private double minCirc = 0.6; // expected minimum circularity of the seed
-	private double minSize = 30;
-	private List<Seed> seedArray = new ArrayList<Seed>();
+	private double expLWR; // expected seed length to width ratio
+	private double minCirc; // expected minimum circularity of the seed
+	private double minSize;
+	private ArrayList<Seed> seedArray = new ArrayList<Seed>();
+	private final Context context;
 	
-    
-	
-	public ImgProcess1KK(String inputFILE){
+	public ImgProcess1KK(String inputFILE, Context context){
+		this.context = context;
 		System.out.println("WARNING: Reference diameter has not been set. \n" + "Ref Diameter: "+refDiam);
 		imageFILE = inputFILE;
+		
+		ep = context.getSharedPreferences("Settings", 0);
 		this.initialize();
 		this.processImage();
 	}
 	
-	public ImgProcess1KK(String inputFILE, double refDiameter){
+	public ImgProcess1KK(String inputFILE, double refDiameter, Context context){
+		this.context = context;
     	double start = System.currentTimeMillis();
     	
 		refDiam = refDiameter;
 		imageFILE = inputFILE;
+		
+		ep = context.getSharedPreferences("Settings", 0);
 		this.initialize();
 		this.processImage();
     	
@@ -51,6 +61,12 @@ public class ImgProcess1KK {
 	
 	private void initialize(){
 		//System.loadLibrary(Core.NATIVE_LIBRARY_NAME); // Load the native library.
+		
+		refDiam = Double.valueOf(ep.getString("refDiam","1")); // Wheat default
+		expLWR = Double.valueOf(ep.getString("expectLWR","1.2")); // Wheat default
+		minCirc = Double.valueOf(ep.getString("minCirc","0.6"));  // Wheat default
+		minSize = Double.valueOf(ep.getString("minSize", "30"));  // Wheat default
+				
 		image = Highgui.imread(imageFILE);
 		System.out.println(String.format("Processing %s", imageFILE));
 		Imgproc.cvtColor(image, image, Imgproc.COLOR_BGR2HSV);
@@ -210,7 +226,6 @@ public class ImgProcess1KK {
 	
 	/**
 	 * Find seeds based on color filter and expected shape
-	 * <p>
 	 * Image must be initialized and converted to HSV  
 	 *
 	 * @param  
@@ -233,10 +248,12 @@ public class ImgProcess1KK {
 	    		Seed s = new Seed(tmp);
 	    		if(s.isCanonical){
 	    			seedArray.add(s);
+	    			
 	    		}
 	    	}
 	    	
 	    }
+	    
 	    System.out.println("NUMBER OF SEEDS MEASURED: " + seedArray.size());
 	}
 
@@ -301,8 +318,6 @@ public class ImgProcess1KK {
 		this.filterGreen[1] = high;
 	}
 	
-	
-	
 	/**
 	 * Returns a false color image with the reference and seeds colored  
 	 *
@@ -356,8 +371,6 @@ public class ImgProcess1KK {
 			
 		}
 		
-
-		
     	return pImg;
 	}
 	
@@ -376,7 +389,6 @@ public class ImgProcess1KK {
 	
 	
 	public class Seed{
-		
 		private double length; 
 		private double width; 
 		private double circ;
@@ -405,6 +417,18 @@ public class ImgProcess1KK {
 	     * @param c expected circularity of the seed
 	     */
 		
+		public double getLength() {
+			return length;
+		}
+		
+		public double getWidth() {
+			return width;
+		}
+		
+		public double getCirc() {
+			return circ;
+		}
+		
 		public Seed(MatOfPoint2f mat){
 			seedMat = mat;
 			mat.convertTo(perm, CvType.CV_32S);
@@ -419,12 +443,10 @@ public class ImgProcess1KK {
     		this.findMaxVec();
     		this.findIS();
     		
-    		
 			if(this.checkCanonical()){
 			//if(this.checkElp()){
 				isCanonical = true;
 			}
-    		
     		
 		}
 		
@@ -452,8 +474,6 @@ public class ImgProcess1KK {
 		 * 
 		 */
 		private void findMaxVec(){
-					
-			
 			Point[] permArray = perm.toArray();
 			for(int i=0; i<permArray.length; i++){
 				for(int j=i; j<permArray.length; j++){
@@ -493,7 +513,6 @@ public class ImgProcess1KK {
 				}
 			}
 			lwr = length / width;
-
 		}
 		
 		/**
@@ -596,6 +615,11 @@ public class ImgProcess1KK {
 		}
 		
 		
+	}
+
+
+	public ArrayList<Seed> getList() {
+		return seedArray;
 	}
 	
 	
