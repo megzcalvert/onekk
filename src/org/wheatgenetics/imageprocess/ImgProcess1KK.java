@@ -10,9 +10,6 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.utils.*;
 import org.wheatgenetics.imageprocess.ImgProcess1KK.Seed;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
 public class ImgProcess1KK {
 
 	private String imageFILE; 
@@ -24,33 +21,29 @@ public class ImgProcess1KK {
 	private double refDiam; 
 	
 	private double pixelSize = 0; // pixel size in mm
-
-	private SharedPreferences ep;
 	
 	private double expLWR; // expected seed length to width ratio
 	private double minCirc; // expected minimum circularity of the seed
 	private double minSize;
 	private ArrayList<Seed> seedArray = new ArrayList<Seed>();
-	private final Context context;
 	
-	public ImgProcess1KK(String inputFILE, Context context){
-		this.context = context;
+	public ImgProcess1KK(String inputFILE){
 		System.out.println("WARNING: Reference diameter has not been set. \n" + "Ref Diameter: "+refDiam);
 		imageFILE = inputFILE;
 		
-		ep = context.getSharedPreferences("Settings", 0);
 		this.initialize();
 		this.processImage();
 	}
 	
-	public ImgProcess1KK(String inputFILE, double refDiameter, Context context){
-		this.context = context;
+	public ImgProcess1KK(String inputFILE, double refDiameter, double expLenWdthR, double minCircularity, double minSeedSize){
     	double start = System.currentTimeMillis();
     	
+    	imageFILE = inputFILE;
 		refDiam = refDiameter;
-		imageFILE = inputFILE;
+		expLWR = expLenWdthR;
+		minCirc = minCircularity;
+		minSize = minSeedSize;
 		
-		ep = context.getSharedPreferences("Settings", 0);
 		this.initialize();
 		this.processImage();
     	
@@ -62,10 +55,6 @@ public class ImgProcess1KK {
 	private void initialize(){
 		//System.loadLibrary(Core.NATIVE_LIBRARY_NAME); // Load the native library.
 		
-		refDiam = Double.valueOf(ep.getString("refDiam","1")); // Wheat default
-		expLWR = Double.valueOf(ep.getString("expectLWR","1.2")); // Wheat default
-		minCirc = Double.valueOf(ep.getString("minCirc","0.6"));  // Wheat default
-		minSize = Double.valueOf(ep.getString("minSize", "30"));  // Wheat default
 				
 		image = Highgui.imread(imageFILE);
 		System.out.println(String.format("Processing %s", imageFILE));

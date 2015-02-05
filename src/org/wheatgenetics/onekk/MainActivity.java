@@ -739,7 +739,12 @@ public class MainActivity extends Activity implements OnInitListener {
 	private void imageAnalysis(Uri photo) {
 		photoName = photo.getLastPathSegment().toString();
 		
-	    ImgProcess1KK imgP = new ImgProcess1KK(Environment.getExternalStorageDirectory().toString()+ "/OneKK/Photos/" + photoName, 1, this);
+		double refDiam = Double.valueOf(ep.getString("refDiam","1")); // Wheat default
+		double expLWR = Double.valueOf(ep.getString("expectLWR","1.2")); // Wheat default
+		double minCirc = Double.valueOf(ep.getString("minCirc","0.6"));  // Wheat default
+		double minSize = Double.valueOf(ep.getString("minSize", "30"));  // Wheat default
+		
+	    ImgProcess1KK imgP = new ImgProcess1KK(Environment.getExternalStorageDirectory().toString()+ "/OneKK/Photos/" + photoName, refDiam, expLWR, minCirc, minSize);
 	    imgP.writeProcessedImg(Environment.getExternalStorageDirectory().toString() + "/OneKK/AnalyzedPhotos/" + photoName + "_new.jpg");
 	    
 	    seeds = imgP.getList();
